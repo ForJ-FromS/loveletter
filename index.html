@@ -1,0 +1,747 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>발췌 문구 생성기</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f1ec;
+      --panel: #fffaf4;
+      --ink: #2e2a27;
+      --muted: #81756c;
+      --line: #ded2c6;
+      --accent: #7f6f61;
+      --accent-dark: #4f4740;
+      --shadow: 0 16px 40px rgba(74, 58, 42, 0.14);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    .app {
+      width: min(1420px, 100%);
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: minmax(320px, 430px) minmax(0, 1fr);
+      gap: 24px;
+      align-items: start;
+    }
+
+    .toolbar {
+      position: sticky;
+      top: 18px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    h1 {
+      margin: 0 0 4px;
+      font-size: 24px;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 0 0 12px;
+      font-size: 15px;
+      line-height: 1.35;
+      letter-spacing: 0;
+    }
+
+    .sub {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+      margin-top: 12px;
+    }
+
+    label,
+    .label {
+      color: var(--accent-dark);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    textarea,
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fffdf9;
+      color: var(--ink);
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    textarea:focus,
+    input:focus,
+    select:focus {
+      border-color: #a49180;
+      box-shadow: 0 0 0 3px rgba(127, 111, 97, 0.16);
+    }
+
+    textarea {
+      min-height: 210px;
+      resize: vertical;
+      padding: 12px;
+      line-height: 1.65;
+      word-break: keep-all;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      height: 40px;
+      padding: 0 10px;
+    }
+
+    input[type="file"] {
+      width: 100%;
+      font-size: 13px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .segmented.two {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .chip {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fffdf9;
+      color: var(--accent-dark);
+      min-height: 38px;
+      cursor: pointer;
+    }
+
+    .chip[aria-pressed="true"] {
+      background: var(--accent-dark);
+      border-color: var(--accent-dark);
+      color: #fffaf4;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .value {
+      color: var(--muted);
+      font-size: 12px;
+      min-width: 48px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .btn {
+      min-height: 44px;
+      border: 0;
+      border-radius: 6px;
+      background: var(--accent-dark);
+      color: #fffaf4;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .btn.secondary {
+      background: #e5dacf;
+      color: var(--accent-dark);
+    }
+
+    .preview-wrap {
+      min-width: 0;
+      display: grid;
+      gap: 12px;
+    }
+
+    .preview-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: end;
+      padding: 0 4px;
+    }
+
+    .counter {
+      color: var(--muted);
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .stage {
+      width: 100%;
+      min-height: calc(100vh - 92px);
+      display: grid;
+      place-items: center;
+      padding: 12px;
+      background:
+        linear-gradient(45deg, rgba(127,111,97,0.08) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(127,111,97,0.08) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(127,111,97,0.08) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(127,111,97,0.08) 75%);
+      background-size: 28px 28px;
+      background-position: 0 0, 0 14px, 14px -14px, -14px 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      max-width: 100%;
+      max-height: calc(100vh - 120px);
+      background: #233142;
+      box-shadow: var(--shadow);
+    }
+
+    @media (max-width: 960px) {
+      .app {
+        grid-template-columns: 1fr;
+        padding: 14px;
+      }
+
+      .toolbar {
+        position: static;
+      }
+
+      .stage {
+        min-height: 0;
+      }
+
+      canvas {
+        max-height: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="toolbar">
+      <div class="panel">
+        <h1>발췌 문구 생성기</h1>
+        <p class="sub">흐릿하지 않게, 긴 문장도 넉넉하게 들어가는 이미지 저장용 캔버스예요.</p>
+
+        <div class="field">
+          <label for="quote">본문</label>
+          <textarea id="quote" spellcheck="false"></textarea>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="creator">제작자</label>
+            <input id="creator" type="text" value="">
+          </div>
+          <div class="field">
+            <label for="character">캐릭터명</label>
+            <input id="character" type="text" value="">
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>캔버스</h2>
+        <div class="segmented" aria-label="캔버스 비율">
+          <button class="chip" data-ratio="1:1" aria-pressed="false">1:1</button>
+          <button class="chip" data-ratio="4:5" aria-pressed="true">4:5</button>
+          <button class="chip" data-ratio="16:9" aria-pressed="false">16:9</button>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="font">글꼴</label>
+            <select id="font">
+              <option value="batang">바탕</option>
+              <option value="myeongjo">명조</option>
+              <option value="pretendard">프리텐다드</option>
+              <option value="notoSerif">Noto Serif KR</option>
+              <option value="notoSans">Noto Sans KR</option>
+              <option value="nanumMyeongjo">나눔명조</option>
+              <option value="nanumGothic">나눔고딕</option>
+              <option value="kopubBatang">KoPub 바탕</option>
+              <option value="gowunBatang">고운바탕</option>
+              <option value="gowunDodum">고운돋움</option>
+              <option value="maruburi">마루부리</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="align">정렬</label>
+            <select id="align">
+              <option value="left">왼쪽</option>
+              <option value="center">가운데</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="row">
+            <span class="label">글자 크기</span>
+            <span class="value" id="fontSizeValue">42px</span>
+          </div>
+          <input id="fontSize" type="range" min="24" max="62" value="42">
+        </div>
+
+        <div class="field">
+          <div class="row">
+            <span class="label">줄 간격</span>
+            <span class="value" id="lineHeightValue">1.55</span>
+          </div>
+          <input id="lineHeight" type="range" min="1.25" max="2.05" value="1.55" step="0.05">
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <div class="row">
+              <span class="label">여백</span>
+              <span class="value" id="paddingValue">88px</span>
+            </div>
+            <input id="padding" type="range" min="42" max="150" value="88">
+          </div>
+          <div class="field">
+            <div class="row">
+              <span class="label">자간</span>
+              <span class="value" id="trackingValue">0px</span>
+            </div>
+            <input id="tracking" type="range" min="0" max="3" value="0" step="0.25">
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>배경</h2>
+        <div class="field">
+          <label for="imageInput">배경 이미지</label>
+          <input id="imageInput" type="file" accept="image/*">
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="bgColor">기본 배경색</label>
+            <input id="bgColor" type="color" value="#000000">
+          </div>
+          <div class="field">
+            <label for="textColor">글자 색</label>
+            <input id="textColor" type="color" value="#fffdf7">
+          </div>
+        </div>
+
+        <div class="segmented" aria-label="기본 배경색">
+          <button class="chip" data-bg-color="#000000" aria-pressed="true">검은색</button>
+          <button class="chip" data-bg-color="#ffffff" aria-pressed="false">흰색</button>
+          <button class="chip" data-bg-color="#4b5d72" aria-pressed="false">청회색</button>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="fit">이미지 맞춤</label>
+            <select id="fit">
+              <option value="cover">채우기</option>
+              <option value="contain">전체 보이기</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="label">이미지 밝기</span>
+          <div class="segmented two" aria-label="이미지 밝기">
+            <button class="chip" data-dim-mode="original" aria-pressed="false">원본</button>
+            <button class="chip" data-dim-mode="dark" aria-pressed="true">어둡게</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="row">
+            <span class="label">어둡게 농도</span>
+            <span class="value" id="dimValue">42%</span>
+          </div>
+          <input id="dim" type="range" min="0" max="72" value="42">
+        </div>
+
+        <div class="field">
+          <div class="row">
+            <span class="label">텍스트 그림자</span>
+            <span class="value" id="shadowValue">42%</span>
+          </div>
+          <input id="textShadow" type="range" min="0" max="80" value="42">
+        </div>
+
+        <div class="actions field">
+          <button class="btn secondary" id="clearImageBtn" type="button">이미지 삭제</button>
+          <button class="btn" id="saveBtn" type="button">PNG 저장</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="preview-wrap" aria-label="미리보기">
+      <div class="preview-head">
+        <div>
+          <h2>미리보기</h2>
+          <p class="sub">저장 파일은 화면보다 더 선명한 2배 해상도로 만들어져요.</p>
+        </div>
+        <div class="counter" id="counter">0자</div>
+      </div>
+      <div class="stage">
+        <canvas id="canvas" width="1080" height="1350"></canvas>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const canvas = document.querySelector("#canvas");
+    const ctx = canvas.getContext("2d");
+    const inputs = {
+      quote: document.querySelector("#quote"),
+      creator: document.querySelector("#creator"),
+      character: document.querySelector("#character"),
+      font: document.querySelector("#font"),
+      align: document.querySelector("#align"),
+      fontSize: document.querySelector("#fontSize"),
+      lineHeight: document.querySelector("#lineHeight"),
+      padding: document.querySelector("#padding"),
+      tracking: document.querySelector("#tracking"),
+      imageInput: document.querySelector("#imageInput"),
+      fit: document.querySelector("#fit"),
+      bgColor: document.querySelector("#bgColor"),
+      textColor: document.querySelector("#textColor"),
+      dim: document.querySelector("#dim"),
+      textShadow: document.querySelector("#textShadow"),
+    };
+    const labels = {
+      fontSize: document.querySelector("#fontSizeValue"),
+      lineHeight: document.querySelector("#lineHeightValue"),
+      padding: document.querySelector("#paddingValue"),
+      tracking: document.querySelector("#trackingValue"),
+      dim: document.querySelector("#dimValue"),
+      textShadow: document.querySelector("#shadowValue"),
+      counter: document.querySelector("#counter"),
+    };
+
+    const state = {
+      ratio: "4:5",
+      dimMode: "dark",
+      image: null,
+    };
+
+    const ratios = {
+      "1:1": [1080, 1080],
+      "4:5": [1080, 1350],
+      "16:9": [1600, 900],
+    };
+
+    const fontFamilies = {
+      batang: `"Batang", "AppleMyungjo", "KoPub Batang", serif`,
+      myeongjo: `"Nanum Myeongjo", "Noto Serif KR", "AppleMyungjo", "Batang", serif`,
+      pretendard: `"Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", Arial, sans-serif`,
+      notoSerif: `"Noto Serif KR", "Source Han Serif K", "AppleMyungjo", "Batang", serif`,
+      notoSans: `"Noto Sans KR", "Source Han Sans K", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif`,
+      nanumMyeongjo: `"Nanum Myeongjo", "AppleMyungjo", "Batang", serif`,
+      nanumGothic: `"Nanum Gothic", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif`,
+      kopubBatang: `"KoPub Batang", "KoPubWorld Batang", "Batang", "AppleMyungjo", serif`,
+      gowunBatang: `"Gowun Batang", "GowunBatang", "AppleMyungjo", "Batang", serif`,
+      gowunDodum: `"Gowun Dodum", "GowunDodum", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif`,
+      maruburi: `"MaruBuri", "Maru Buri", "Noto Serif KR", "AppleMyungjo", "Batang", serif`,
+      sans: `"Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", Arial, sans-serif`,
+    };
+
+    function setCanvasRatio() {
+      const [w, h] = ratios[state.ratio];
+      canvas.width = w;
+      canvas.height = h;
+    }
+
+    function drawImageCover(img, fit) {
+      const cw = canvas.width;
+      const ch = canvas.height;
+      const scale = fit === "contain"
+        ? Math.min(cw / img.width, ch / img.height)
+        : Math.max(cw / img.width, ch / img.height);
+      const dw = img.width * scale;
+      const dh = img.height * scale;
+      const dx = (cw - dw) / 2;
+      const dy = (ch - dh) / 2;
+      ctx.fillStyle = inputs.bgColor.value;
+      ctx.fillRect(0, 0, cw, ch);
+      ctx.drawImage(img, dx, dy, dw, dh);
+    }
+
+    function applyLetterSpacing(text, x, y, tracking, align) {
+      if (!tracking) {
+        ctx.fillText(text, x, y);
+        return;
+      }
+      const chars = [...text];
+      const width = chars.reduce((sum, char, index) => {
+        return sum + ctx.measureText(char).width + (index ? tracking : 0);
+      }, 0);
+      let cursor = align === "center" ? x - width / 2 : x;
+      chars.forEach((char, index) => {
+        if (index) cursor += tracking;
+        ctx.fillText(char, cursor, y);
+        cursor += ctx.measureText(char).width;
+      });
+    }
+
+    function measureWithTracking(text, tracking) {
+      const chars = [...text];
+      const basic = ctx.measureText(text).width;
+      return basic + Math.max(0, chars.length - 1) * tracking;
+    }
+
+    function wrapLine(line, maxWidth, tracking) {
+      if (!line.trim()) return [""];
+      const units = line.includes(" ") ? line.split(/(\s+)/) : [...line];
+      const wrapped = [];
+      let current = "";
+
+      units.forEach((unit) => {
+        const next = current + unit;
+        if (measureWithTracking(next, tracking) <= maxWidth || !current) {
+          current = next;
+          return;
+        }
+        wrapped.push(current.trimEnd());
+        current = unit.trimStart();
+      });
+
+      if (current) wrapped.push(current.trimEnd());
+      return wrapped;
+    }
+
+    function wrapText(text, maxWidth, fontSize, tracking) {
+      ctx.font = `${fontSize}px ${fontFamilies[inputs.font.value]}`;
+      return text.split("\n").flatMap((line) => wrapLine(line, maxWidth, tracking));
+    }
+
+    function fitFontSize(text, maxWidth, maxHeight, baseSize, lineHeight, tracking) {
+      let size = baseSize;
+      while (size >= 20) {
+        const lines = wrapText(text, maxWidth, size, tracking);
+        const height = lines.length * size * lineHeight;
+        if (height <= maxHeight) return { size, lines };
+        size -= 1;
+      }
+      return { size: 20, lines: wrapText(text, maxWidth, 20, tracking) };
+    }
+
+    function drawTextBlock() {
+      const w = canvas.width;
+      const h = canvas.height;
+      const pad = Number(inputs.padding.value);
+      const baseSize = Number(inputs.fontSize.value);
+      const lineHeight = Number(inputs.lineHeight.value);
+      const tracking = Number(inputs.tracking.value);
+      const align = inputs.align.value;
+      const text = inputs.quote.value.trim();
+      const creator = inputs.creator.value.trim();
+      const character = inputs.character.value.trim();
+      const credit = [creator, character].filter(Boolean).join("  |  ");
+      const footerSize = Math.max(22, fitFooterSize(baseSize));
+      const footerGap = credit ? Math.max(62, baseSize * 1.55) : 0;
+      const maxWidth = w - pad * 2;
+      const maxHeight = h - pad * 2 - footerGap - footerSize;
+      const fit = fitFontSize(text, maxWidth, maxHeight, baseSize, lineHeight, tracking);
+      const lineGap = fit.size * lineHeight;
+      const textHeight = fit.lines.length > 0 ? (fit.lines.length - 1) * lineGap + fit.size : 0;
+      const groupHeight = textHeight + footerGap + (credit ? footerSize : 0);
+      const x = align === "center" ? w / 2 : pad;
+      let y = Math.max(pad, (h - groupHeight) / 2) + fit.size;
+
+      ctx.save();
+      ctx.font = `${fit.size}px ${fontFamilies[inputs.font.value]}`;
+      ctx.textAlign = align;
+      ctx.textBaseline = "alphabetic";
+      ctx.fillStyle = inputs.textColor.value;
+      ctx.shadowColor = `rgba(0, 0, 0, ${Number(inputs.textShadow.value) / 100})`;
+      ctx.shadowBlur = fit.size * 0.16;
+      ctx.shadowOffsetY = 2;
+
+      fit.lines.forEach((line) => {
+        applyLetterSpacing(line, x, y, tracking, align);
+        y += lineGap;
+      });
+      ctx.restore();
+
+      drawFooter(pad, y - lineGap + footerGap + footerSize, footerSize, credit);
+    }
+
+    function fitFooterSize(baseSize) {
+      return Math.round(Math.min(34, Math.max(24, baseSize * 0.72)));
+    }
+
+    function drawFooter(pad, y, footerSize, credit) {
+      const color = inputs.textColor.value;
+      if (!credit) return;
+
+      ctx.save();
+      ctx.fillStyle = color;
+      ctx.shadowColor = `rgba(0, 0, 0, ${Number(inputs.textShadow.value) / 120})`;
+      ctx.shadowBlur = 8;
+      ctx.globalAlpha = 0.76;
+      ctx.font = `700 ${footerSize}px ${fontFamilies.sans}`;
+      ctx.textAlign = "left";
+      ctx.fillText(credit, pad, y);
+      ctx.restore();
+    }
+
+    function draw() {
+      setCanvasRatio();
+      if (state.image) {
+        drawImageCover(state.image, inputs.fit.value);
+      } else {
+        ctx.fillStyle = inputs.bgColor.value;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      if (state.image && state.dimMode === "dark") {
+        ctx.fillStyle = `rgba(10, 18, 26, ${Number(inputs.dim.value) / 100})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      drawTextBlock();
+      updateLabels();
+    }
+
+    function updateLabels() {
+      labels.fontSize.textContent = `${inputs.fontSize.value}px`;
+      labels.lineHeight.textContent = Number(inputs.lineHeight.value).toFixed(2);
+      labels.padding.textContent = `${inputs.padding.value}px`;
+      labels.tracking.textContent = `${inputs.tracking.value}px`;
+      labels.dim.textContent = state.dimMode === "dark" ? `${inputs.dim.value}%` : "원본";
+      labels.textShadow.textContent = `${inputs.textShadow.value}%`;
+      labels.counter.textContent = `${[...inputs.quote.value.replace(/\s/g, "")].length.toLocaleString("ko-KR")}자`;
+    }
+
+    function savePng() {
+      const a = document.createElement("a");
+      a.download = `quote-${new Date().toISOString().slice(0, 10)}.png`;
+      a.href = canvas.toDataURL("image/png");
+      a.click();
+    }
+
+    document.querySelectorAll("[data-ratio]").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.ratio = button.dataset.ratio;
+        document.querySelectorAll("[data-ratio]").forEach((item) => {
+          item.setAttribute("aria-pressed", String(item === button));
+        });
+        draw();
+      });
+    });
+
+    document.querySelectorAll("[data-dim-mode]").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.dimMode = button.dataset.dimMode;
+        document.querySelectorAll("[data-dim-mode]").forEach((item) => {
+          item.setAttribute("aria-pressed", String(item === button));
+        });
+        draw();
+      });
+    });
+
+    document.querySelectorAll("[data-bg-color]").forEach((button) => {
+      button.addEventListener("click", () => {
+        inputs.bgColor.value = button.dataset.bgColor;
+        inputs.textColor.value = button.dataset.bgColor === "#ffffff" ? "#26211d" : "#fffdf7";
+        document.querySelectorAll("[data-bg-color]").forEach((item) => {
+          item.setAttribute("aria-pressed", String(item === button));
+        });
+        draw();
+      });
+    });
+
+    Object.values(inputs).forEach((input) => {
+      input.addEventListener("input", draw);
+      input.addEventListener("change", draw);
+    });
+
+    inputs.imageInput.addEventListener("change", (event) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const image = new Image();
+        image.onload = () => {
+          state.image = image;
+          draw();
+        };
+        image.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    document.querySelector("#clearImageBtn").addEventListener("click", () => {
+      inputs.imageInput.value = "";
+      state.image = null;
+      draw();
+    });
+    document.querySelector("#saveBtn").addEventListener("click", savePng);
+
+    draw();
+  </script>
+</body>
+</html>
