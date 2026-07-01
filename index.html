@@ -1,0 +1,2799 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>발췌 이미지 에디터</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Serif+KR:wght@200;300;400;500;700&family=Noto+Sans+KR:wght@100;300;400;500;700&family=Nanum+Gothic:wght@400;700;800&display=swap" rel="stylesheet">
+  <style>
+    @font-face {
+      font-family: 'DungGeunMo';
+      src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/DungGeunMo.woff') format('woff');
+      font-weight: normal;
+      font-display: swap;
+    }
+
+    :root {
+      color-scheme: light;
+      --bg: #181716;
+      --bg-2: #24211f;
+      --panel: #faf8f2;
+      --panel-soft: #efebe2;
+      --ink: #202020;
+      --muted: #746f68;
+      --line: #d8d1c6;
+      --line-soft: #ebe5da;
+      --accent: #d6533f;
+      --accent-ink: #241d1a;
+      --accent-dark: #a53d31;
+      --gold: #c3923b;
+      --studio: #191716;
+      --studio-2: #0f0e0d;
+      --shadow-sm: 0 1px 2px rgba(15, 20, 22, 0.08);
+      --shadow: 0 18px 42px -30px rgba(10, 14, 16, 0.45);
+      --shadow-lg: 0 36px 90px -36px rgba(0, 0, 0, 0.58);
+      --radius: 6px;
+      --radius-sm: 4px;
+      --serif: "Nanum Myeongjo", "Noto Serif KR", "AppleMyungjo", "Batang", serif;
+      font-family: "Noto Sans KR", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(900px 520px at 18% 0%, rgba(214, 83, 63, 0.08), transparent 62%),
+        linear-gradient(135deg, var(--studio) 0%, var(--studio-2) 100%);
+      overflow: hidden;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    .app {
+      width: min(1720px, 100%);
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 34px 40px;
+      display: grid;
+      grid-template-columns: minmax(430px, 540px) minmax(0, 1fr);
+      gap: 34px;
+      align-items: stretch;
+    }
+
+    .toolbar {
+      display: grid;
+      align-content: start;
+      gap: 0;
+      height: calc(100vh - 68px);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding: 18px 38px 54px 32px;
+      background: var(--panel);
+      border: 1px solid rgba(32, 32, 32, 0.12);
+      border-radius: 16px;
+      box-shadow: 0 24px 70px -42px rgba(65, 45, 29, 0.55);
+      counter-reset: editor-section;
+    }
+
+    .panel {
+      background: transparent;
+      border: 0;
+      border-bottom: 1px solid var(--line-soft);
+      border-radius: 0;
+      box-shadow: none;
+      padding: 22px 0;
+      position: relative;
+    }
+
+    .panel-hero {
+      padding: 2px 0 24px;
+      background: transparent;
+      border-color: var(--line);
+    }
+
+    .panel-hero::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -1px;
+      height: 3px;
+      background: repeating-linear-gradient(90deg, var(--ink) 0 18px, transparent 18px 28px);
+      opacity: 0.9;
+    }
+
+    .kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      min-height: 28px;
+      padding: 0 10px;
+      border: 1px solid var(--ink);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--ink);
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.14em;
+      margin-bottom: 12px;
+      box-shadow: 3px 3px 0 var(--ink);
+    }
+
+    .kicker::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    h1 {
+      margin: 0 0 9px;
+      font-family: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      font-size: 30px;
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: 0;
+      color: var(--accent-ink);
+    }
+
+    h2 {
+      margin: 0 0 18px;
+      font-size: 11px;
+      font-weight: 900;
+      line-height: 1.3;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent-ink);
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    h2::before {
+      counter-increment: editor-section;
+      content: counter(editor-section, decimal-leading-zero);
+      display: inline-grid;
+      place-items: center;
+      width: 30px;
+      height: 22px;
+      border: 1px solid var(--ink);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--ink);
+      font-size: 10px;
+      letter-spacing: 0;
+      box-shadow: 2px 2px 0 var(--ink);
+    }
+
+    h2.collapsible::after {
+      content: "▾";
+      margin-left: auto;
+      font-size: 11px;
+      transition: transform 0.2s ease;
+      opacity: 0.6;
+    }
+
+    .panel.collapsed h2.collapsible::after {
+      transform: rotate(-90deg);
+    }
+
+    .panel.collapsed > *:not(h2) {
+      display: none !important;
+    }
+
+    .panel.collapsed {
+      padding-bottom: 20px;
+    }
+
+    .panel.collapsed h2 {
+      margin-bottom: 0;
+    }
+
+    .panel { padding: 22px 0; }
+    .field { margin-top: 11px; }
+    .chip { min-height: 36px; font-size: 12.5px; }
+    .toggle-chip { padding: 6px 12px; font-size: 12px; }
+    .btn { min-height: 42px; }
+    .counter { padding: 4px 11px; font-size: 11.5px; }
+    label, .label { font-size: 12px; }
+    input[type="text"], input[type="number"], select { height: 40px; }
+    input[type="color"] { height: 40px; }
+
+    .sub {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12.5px;
+      line-height: 1.65;
+    }
+
+    .hint {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 11.5px;
+      line-height: 1.55;
+    }
+
+    .hint b {
+      color: var(--accent-dark);
+      font-weight: 700;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+      margin-top: 14px;
+    }
+
+    label,
+    .label {
+      color: var(--accent-ink);
+      font-size: 11.5px;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    textarea,
+    .quote-editor,
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      border: 1px solid var(--ink);
+      border-radius: var(--radius-sm);
+      background: #fffefa;
+      color: var(--ink);
+      outline: none;
+      box-shadow: 3px 3px 0 rgba(32, 32, 32, 0.08);
+      transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    }
+
+    textarea:focus,
+    .quote-editor:focus,
+    input:focus,
+    select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(214, 83, 63, 0.16), 3px 3px 0 rgba(32, 32, 32, 0.12);
+      background: #fff;
+    }
+
+    textarea,
+    .quote-editor {
+      min-height: 190px;
+      resize: vertical;
+      padding: 13px 14px;
+      line-height: 1.7;
+      word-break: keep-all;
+    }
+
+    .quote-editor {
+      height: 190px;
+      max-height: 190px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      user-select: text;
+    }
+
+    .quote-editor:empty::before {
+      content: "본문을 입력하세요";
+      color: rgba(116, 111, 104, 0.68);
+      pointer-events: none;
+    }
+
+    .quote-editor [data-format="emph"] {
+      color: var(--editor-emph-color, #236d94);
+      font-weight: 800;
+    }
+
+    .quote-editor [data-format="bold"] {
+      font-weight: 800;
+    }
+
+    .quote-editor [data-format="italic"] {
+      font-style: italic;
+    }
+
+    .quote-editor [data-format="hilite"] {
+      background: linear-gradient(180deg, transparent 16%, var(--editor-hilite-color, #ffe14d) 16%, var(--editor-hilite-color, #ffe14d) 88%, transparent 88%);
+      box-decoration-break: clone;
+      -webkit-box-decoration-break: clone;
+    }
+
+    .quote-editor [data-format="quote"] {
+      border-left: 3px solid var(--editor-quote-color, #d6533f);
+      padding-left: 8px;
+    }
+
+    textarea.big-input,
+    .quote-editor.big-input {
+      min-height: 460px;
+    }
+
+    .quote-editor.big-input {
+      height: 460px;
+      max-height: 460px;
+    }
+
+    .format-toolbar {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 7px;
+      padding: 8px;
+      background: #f3eee4;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+    }
+
+    .format-btn {
+      min-width: 0;
+      min-height: 38px;
+      border: 1px solid var(--ink);
+      border-radius: var(--radius-sm);
+      background: #fffefa;
+      color: var(--accent-ink);
+      font-size: 12px;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 2px 2px 0 rgba(32, 32, 32, 0.08);
+      transition: transform 0.14s ease, background 0.14s ease, box-shadow 0.14s ease;
+    }
+
+    .format-btn:hover {
+      background: #f9e2da;
+      transform: translate(-1px, -1px);
+      box-shadow: 3px 3px 0 rgba(32, 32, 32, 0.12);
+    }
+
+    .format-btn:active {
+      transform: translate(0, 0);
+      box-shadow: 1px 1px 0 rgba(32, 32, 32, 0.12);
+    }
+
+    .format-btn[data-format="emph"] {
+      color: #236d94;
+    }
+
+    .format-btn[data-format="hilite"] {
+      background: linear-gradient(180deg, #fffefa 0%, #fff3a8 100%);
+      color: #5f4c00;
+    }
+
+    .format-btn[data-format="quote"] {
+      color: var(--accent-dark);
+    }
+
+    .format-color-panel {
+      display: none;
+      align-items: center;
+      gap: 9px;
+      padding: 9px 10px;
+      background: #fffefa;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      box-shadow: 3px 3px 0 rgba(32, 32, 32, 0.08);
+    }
+
+    .format-color-panel.is-open {
+      display: flex;
+    }
+
+    .format-color-panel label {
+      white-space: nowrap;
+    }
+
+    .format-color-panel input[type="color"] {
+      width: 74px;
+      height: 34px;
+      padding: 3px;
+      flex: 0 0 auto;
+    }
+
+    .format-color-note {
+      color: var(--muted);
+      font-size: 11.5px;
+      line-height: 1.45;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      height: 42px;
+      padding: 0 12px;
+    }
+
+    select {
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: linear-gradient(45deg, transparent 50%, var(--accent) 50%), linear-gradient(135deg, var(--accent) 50%, transparent 50%);
+      background-position: calc(100% - 16px) 50%, calc(100% - 11px) 50%;
+      background-size: 5px 5px, 5px 5px;
+      background-repeat: no-repeat;
+      padding-right: 30px;
+      cursor: pointer;
+    }
+
+    input[type="color"] {
+      height: 42px;
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: #ffffff;
+      padding: 4px;
+      cursor: pointer;
+      transition: border-color 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    input[type="color"]:hover {
+      border-color: var(--accent);
+    }
+
+    input[type="file"] {
+      width: 100%;
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+
+    input[type="file"]::file-selector-button {
+      font: inherit;
+      font-weight: 700;
+      font-size: 12px;
+      color: var(--accent-ink);
+      background: var(--panel-soft);
+      border: 1px solid var(--ink);
+      border-radius: 999px;
+      padding: 7px 14px;
+      margin-right: 10px;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+
+    input[type="file"]::file-selector-button:hover {
+      background: #f6dfd8;
+      border-color: var(--accent);
+    }
+
+    input[type="range"] {
+      width: 100%;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 10px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent) 0%, var(--accent) 48%, #dfd7cb 48%, #dfd7cb 100%);
+      border: 1px solid var(--ink);
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--panel);
+      border: 2px solid var(--ink);
+      box-shadow: 2px 2px 0 var(--ink);
+      transition: transform 0.12s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.12);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--panel);
+      border: 2px solid var(--ink);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      margin-top: 8px;
+      border: 1px solid var(--ink);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      background: var(--ink);
+    }
+
+    .segmented.two {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .segmented.ratio-seg {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .segmented.ratio-seg .chip {
+      font-size: 12.5px;
+      padding: 0 4px;
+      white-space: nowrap;
+    }
+
+    .chip {
+      border: 0;
+      border-right: 1px solid var(--ink);
+      border-radius: 0;
+      background: #fffefa;
+      color: var(--accent-ink);
+      font-weight: 900;
+      font-size: 12px;
+      min-height: 42px;
+      cursor: pointer;
+      box-shadow: none;
+      transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.12s ease;
+    }
+
+    .chip:last-child {
+      border-right: 0;
+    }
+
+    .chip:hover {
+      background: #f8e5de;
+      transform: none;
+    }
+
+    .chip[aria-pressed="true"] {
+      background: var(--ink);
+      color: #fffefa;
+      box-shadow: inset 0 -4px 0 var(--accent);
+    }
+
+    .toggle-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    .toggle-chip {
+      border: 1px solid var(--ink);
+      border-radius: var(--radius-sm);
+      background: #fffefa;
+      color: var(--accent-ink);
+      padding: 8px 11px;
+      font-size: 12px;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 2px 2px 0 rgba(32, 32, 32, 0.16);
+      transition: background 0.16s ease, color 0.16s ease, transform 0.12s ease, box-shadow 0.12s ease;
+    }
+
+    .toggle-chip:hover {
+      background: #f8e5de;
+      transform: translate(-1px, -1px);
+      box-shadow: 3px 3px 0 rgba(32, 32, 32, 0.2);
+    }
+
+    .toggle-chip[aria-pressed="true"] {
+      background: var(--ink);
+      border-color: var(--ink);
+      color: #fff;
+      box-shadow: inset 0 -4px 0 var(--accent);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .value {
+      color: var(--accent-dark);
+      font-size: 12px;
+      font-weight: 900;
+      min-width: 48px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .btn {
+      min-height: 46px;
+      border: 1px solid var(--ink);
+      border-radius: var(--radius-sm);
+      background: var(--ink);
+      color: #fffefa;
+      font-weight: 900;
+      letter-spacing: 0;
+      cursor: pointer;
+      box-shadow: 4px 4px 0 rgba(32, 32, 32, 0.18);
+      transition: transform 0.12s ease, box-shadow 0.16s ease, background 0.16s ease;
+    }
+
+    .btn:hover {
+      transform: translate(-1px, -1px);
+      box-shadow: 5px 5px 0 rgba(32, 32, 32, 0.22);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      color: #fffefa;
+      min-height: 52px;
+      font-size: 14px;
+    }
+
+    .btn.secondary {
+      background: #fffefa;
+      color: var(--accent-ink);
+      border: 1px solid var(--ink);
+    }
+
+    .btn.secondary:hover {
+      background: #f8e5de;
+    }
+
+    .file-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .file-row input[type="file"] {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .btn.btn-sm {
+      min-height: 38px;
+      padding: 0 16px;
+      flex-shrink: 0;
+      font-size: 13px;
+    }
+
+    .preview-wrap {
+      min-width: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 18px;
+      position: sticky;
+      top: 34px;
+      align-self: stretch;
+      height: calc(100vh - 68px);
+      max-height: none;
+      padding: 24px 28px 28px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 28%),
+        radial-gradient(900px 520px at 50% 0%, rgba(214, 83, 63, 0.14), transparent 60%),
+        transparent;
+    }
+
+    .preview-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: end;
+      padding: 0 2px;
+      color: #f6f2e8;
+    }
+
+    .preview-head h2 {
+      color: #f6f2e8;
+      margin-bottom: 8px;
+    }
+
+    .preview-head h2::before {
+      counter-increment: none;
+      content: "VIEW";
+      width: 44px;
+      background: #fffefa;
+      color: var(--studio);
+      box-shadow: 2px 2px 0 var(--accent);
+    }
+
+    .preview-head .sub {
+      color: rgba(246, 242, 232, 0.62);
+    }
+
+    .counter {
+      color: #f6f2e8;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      border-radius: var(--radius-sm);
+      padding: 7px 13px;
+      font-size: 12px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .stage {
+      width: 100%;
+      min-height: 0;
+      height: 100%;
+      max-height: none;
+      display: grid;
+      place-items: center;
+      padding: 28px 28px 64px;
+      background:
+        linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(255,255,255,0.035) 1px, transparent 1px),
+        rgba(255, 255, 255, 0.055);
+      background-size: 32px 32px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 24px 80px -48px rgba(0,0,0,0.9);
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      max-width: 100%;
+      max-height: calc(100vh - 260px);
+      background: #233142;
+      border-radius: 2px;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.18),
+        0 34px 90px -36px rgba(0, 0, 0, 0.78);
+    }
+
+    .toolbar .panel:last-child {
+      margin: 18px 0 0;
+      padding: 18px 0 0;
+      background: transparent;
+      border-bottom: 0;
+    }
+
+    .toolbar .panel:last-child .field {
+      margin-top: 0;
+    }
+
+    @media (max-width: 960px) {
+      body {
+        overflow: auto;
+        background: var(--panel);
+      }
+
+      .app {
+        grid-template-columns: 1fr;
+        min-height: 0;
+        padding: 0;
+      }
+
+      .toolbar {
+        height: auto;
+        overflow: visible;
+        padding: 14px 18px 28px;
+        border-right: 0;
+        box-shadow: none;
+      }
+
+      .preview-wrap {
+        position: static;
+        height: auto;
+        max-height: none;
+        min-height: 54vh;
+        order: -1;
+        padding: 16px 16px 24px;
+        gap: 12px;
+      }
+
+      .stage {
+        min-height: 360px;
+        height: auto;
+        max-height: none;
+      }
+
+      canvas {
+        max-height: 48vh;
+      }
+
+      .toolbar .panel:last-child {
+        bottom: 0;
+        margin: 14px -6px 0;
+        padding: 12px 6px 0;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .app {
+        padding: 0;
+        gap: 0;
+      }
+
+      .panel {
+        padding: 18px 0;
+        border-radius: 0;
+      }
+
+      h1 {
+        font-size: 27px;
+      }
+
+      .toolbar {
+        gap: 0;
+        padding: 18px 14px 26px;
+      }
+
+      /* 좁은 폭에서 두 칸 입력은 세로로 쌓기 (색상칸 제외) */
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+
+      .grid-2.keep-2 {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .stage {
+        padding: 10px 10px 34px;
+        min-height: 420px;
+        max-height: none;
+        border-radius: 14px;
+      }
+
+      canvas {
+        max-height: 52vh;
+      }
+
+      .actions {
+        grid-template-columns: 1fr;
+      }
+
+      .toggle-chip {
+        padding: 9px 14px;
+        font-size: 13px;
+      }
+
+      .format-toolbar {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .chip {
+        min-height: 44px;
+      }
+
+      /* 모바일 포커스 시 자동 확대 방지 */
+      textarea,
+      .quote-editor,
+      input[type="text"],
+      input[type="number"],
+      select {
+        font-size: 16px;
+      }
+    }
+
+    @keyframes panelRise {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .panel,
+    .preview-wrap {
+      animation: panelRise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .toolbar .panel:nth-child(1) { animation-delay: 0.02s; }
+    .toolbar .panel:nth-child(2) { animation-delay: 0.06s; }
+    .toolbar .panel:nth-child(3) { animation-delay: 0.10s; }
+    .toolbar .panel:nth-child(4) { animation-delay: 0.14s; }
+    .toolbar .panel:nth-child(5) { animation-delay: 0.18s; }
+    .toolbar .panel:nth-child(6) { animation-delay: 0.22s; }
+    .preview-wrap { animation-delay: 0.10s; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .panel, .preview-wrap { animation: none; }
+      * { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="toolbar">
+      <div class="panel panel-hero">
+        <span class="kicker">QUOTE STUDIO</span>
+        <h1>발췌 이미지 에디터</h1>
+        <p class="sub">흐릿하지 않게, 긴 문장도 넉넉하게 들어가는 이미지 저장용 캔버스예요.</p>
+
+        <div class="field">
+          <label for="quoteEditor">본문</label>
+          <div id="quoteEditor" class="quote-editor" contenteditable="true" spellcheck="false" role="textbox" aria-multiline="true"></div>
+          <textarea id="quote" spellcheck="false" hidden aria-hidden="true"></textarea>
+          <div class="format-toolbar" aria-label="선택한 본문 서식">
+            <button class="format-btn" data-format="emph" type="button" title="드래그한 부분 강조 색">강조</button>
+            <button class="format-btn" data-format="bold" type="button" title="드래그한 부분 굵게">B 굵게</button>
+            <button class="format-btn" data-format="italic" type="button" title="드래그한 부분 기울임" style="font-style:italic;">I 기울임</button>
+            <button class="format-btn" data-format="hilite" type="button" title="드래그한 부분 형광펜">형광펜</button>
+            <button class="format-btn" data-format="quote" type="button" title="드래그한 부분 인용 바">▏인용</button>
+          </div>
+          <div class="format-color-panel" id="formatColorPanel" aria-live="polite">
+            <label id="formatColorLabel" for="emphColor">강조 색</label>
+            <input id="emphColor" class="format-color-input" data-color-format="emph" type="color" value="#7fd0ff">
+            <input id="hiliteColor" class="format-color-input" data-color-format="hilite" type="color" value="#ffe14d" hidden>
+            <input id="dialogBarColor" class="format-color-input" data-color-format="quote" type="color" value="#ffd27f" hidden>
+            <span class="format-color-note" id="formatColorNote">강조 버튼 색이에요.</span>
+          </div>
+          <div class="toggle-row tools-row">
+            <button class="toggle-chip" id="indentToggle" type="button" aria-pressed="true">↵ 첫 줄 들여쓰기</button>
+            <button class="toggle-chip" id="bigInputToggle" type="button" aria-pressed="false">⤢ 입력칸 넓게</button>
+          </div>
+          <p class="hint">문장을 드래그한 뒤 위 버튼을 누르면 강조·굵게·기울임·형광펜·인용이 적용돼요. 대사 색은 기존처럼 따옴표 안 문장에 적용돼요.</p>
+        </div>
+
+        <div class="grid-2 keep-2">
+          <div class="field">
+            <label for="character">캐릭터명</label>
+            <input id="character" type="text" value="">
+          </div>
+          <div class="field">
+            <label for="creator">제작자</label>
+            <input id="creator" type="text" value="">
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="creditAlign">출처 정렬</label>
+            <select id="creditAlign">
+              <option value="left">왼쪽</option>
+              <option value="center">가운데</option>
+              <option value="right">오른쪽</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="creditSep">이름 구분 기호</label>
+            <select id="creditSep">
+              <option value="|">|  (막대)</option>
+              <option value="·">·  (가운뎃점)</option>
+              <option value="/">/  (슬래시)</option>
+              <option value="-">-  (하이픈)</option>
+              <option value="—">—  (대시)</option>
+              <option value="•">•  (불릿)</option>
+              <option value="×">×  (곱표)</option>
+              <option value=" ">(공백)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <span class="label">구분선</span>
+            <div class="segmented two" aria-label="구분선">
+              <button class="chip" data-divider="off" aria-pressed="true">없음</button>
+              <button class="chip" data-divider="on" aria-pressed="false">있음</button>
+            </div>
+          </div>
+          <div class="field">
+            <span class="label">출처 크기</span>
+            <div class="segmented two" aria-label="출처 크기">
+              <button class="chip" data-credit-size="auto" aria-pressed="true">자동</button>
+              <button class="chip" data-credit-size="manual" aria-pressed="false">수동</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2 keep-2">
+          <div class="field">
+            <label for="creditColor">출처 글자 색</label>
+            <input id="creditColor" type="color" value="#666666">
+          </div>
+          <div class="field" id="dividerColorField" style="display:none;">
+            <label for="dividerColor">구분선 색</label>
+            <input id="dividerColor" type="color" value="#999999">
+          </div>
+        </div>
+
+        <div class="field" id="creditSizeWrap" style="display:none;">
+          <div class="row">
+            <span class="label">출처 글자 크기</span>
+            <span class="value" id="creditSizeValue">30px</span>
+          </div>
+          <input id="creditSize" type="range" min="14" max="64" value="30">
+        </div>
+
+        <div class="grid-2" id="gapModeRow" style="display:none;">
+          <div class="field">
+            <span class="label">본문~구분선 간격</span>
+            <div class="segmented two" aria-label="본문 구분선 간격">
+              <button class="chip" data-gap-mode="auto" aria-pressed="true">자동</button>
+              <button class="chip" data-gap-mode="manual" aria-pressed="false">수동</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="field" id="gapWrap" style="display:none;">
+          <div class="row">
+            <span class="label">본문~구분선 크기</span>
+            <span class="value" id="dividerGapValue">90px</span>
+          </div>
+          <input id="dividerGap" type="range" min="30" max="260" value="90">
+        </div>
+
+        <div class="grid-2" id="lineGapModeRow" style="display:none;">
+          <div class="field">
+            <span class="label">구분선~출처 간격</span>
+            <div class="segmented two" aria-label="구분선 출처 간격">
+              <button class="chip" data-linegap-mode="auto" aria-pressed="true">자동</button>
+              <button class="chip" data-linegap-mode="manual" aria-pressed="false">수동</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="field" id="lineGapWrap" style="display:none;">
+          <div class="row">
+            <span class="label">구분선~출처 크기</span>
+            <span class="value" id="lineGapValue">60px</span>
+          </div>
+          <input id="lineGap" type="range" min="16" max="160" value="60">
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>캔버스</h2>
+        <div class="segmented ratio-seg" aria-label="캔버스 비율">
+          <button class="chip" data-ratio="1:1" aria-pressed="false">1:1</button>
+          <button class="chip" data-ratio="4:5" aria-pressed="true">4:5</button>
+          <button class="chip" data-ratio="16:9" aria-pressed="false">16:9</button>
+          <button class="chip" data-ratio="twitter" aria-pressed="false">트위터 헤더</button>
+          <button class="chip" data-ratio="custom" aria-pressed="false">직접</button>
+        </div>
+
+        <div class="grid-2 keep-2" id="customSizeWrap" style="display:none; margin-top:8px;">
+          <div class="field">
+            <label for="customW">가로 (px)</label>
+            <input id="customW" type="number" min="100" max="4000" value="1080">
+          </div>
+          <div class="field">
+            <label for="customH">세로 (px)</label>
+            <input id="customH" type="number" min="100" max="4000" value="1350">
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="font">글꼴</label>
+            <select id="font">
+              <option value="batang">바탕</option>
+              <option value="myeongjo">명조</option>
+              <option value="pretendard">프리텐다드</option>
+              <option value="notoSerif">Noto Serif KR</option>
+              <option value="notoSans">Noto Sans KR</option>
+              <option value="nanumMyeongjo">나눔명조</option>
+              <option value="nanumGothic">나눔고딕</option>
+              <option value="kopubBatang">KoPub 바탕</option>
+              <option value="gowunBatang">고운바탕</option>
+              <option value="gowunDodum">고운돋움</option>
+              <option value="maruburi">마루부리</option>
+              <option value="dunggeunmo">둥근모꼴</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="align">정렬</label>
+            <select id="align">
+              <option value="left">왼쪽</option>
+              <option value="center">가운데</option>
+              <option value="justify">양쪽</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="label">본문 스타일</span>
+          <div class="toggle-row">
+            <button class="toggle-chip" id="bodyThin" type="button" aria-pressed="false" style="font-weight:300;">𝗧 얇게</button>
+            <button class="toggle-chip" id="bodyBold" type="button" aria-pressed="false" style="font-weight:800;">B 굵게</button>
+            <button class="toggle-chip" id="bodyItalic" type="button" aria-pressed="false" style="font-style:italic;">I 기울임</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="row">
+            <span class="label">글자 크기</span>
+            <span class="value" id="fontSizeValue">42px</span>
+          </div>
+          <input id="fontSize" type="range" min="12" max="62" value="42">
+        </div>
+
+        <div class="field">
+          <div class="row">
+            <span class="label">줄 간격</span>
+            <span class="value" id="lineHeightValue">1.80</span>
+          </div>
+          <input id="lineHeight" type="range" min="1.25" max="2.40" value="1.8" step="0.05">
+        </div>
+
+        <div class="grid-2 keep-2">
+          <div class="field">
+            <div class="row">
+              <span class="label">여백</span>
+              <span class="value" id="paddingValue">88px</span>
+            </div>
+            <input id="padding" type="range" min="42" max="150" value="88">
+          </div>
+          <div class="field">
+            <div class="row">
+              <span class="label">자간</span>
+              <span class="value" id="trackingValue">0px</span>
+            </div>
+            <input id="tracking" type="range" min="0" max="3" value="0" step="0.25">
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>배경</h2>
+        <div class="field">
+          <label for="imageInput">배경 이미지</label>
+          <div class="file-row">
+            <input id="imageInput" type="file" accept="image/*">
+            <button class="btn secondary btn-sm" id="clearImageBtn" type="button">삭제</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="label">빠른 배경색</span>
+          <div class="segmented" aria-label="빠른 배경색">
+            <button class="chip" data-bg-color="#000000" aria-pressed="true">검은색</button>
+            <button class="chip" data-bg-color="#ffffff" aria-pressed="false">흰색</button>
+            <button class="chip" data-bg-color="#efe6d6" aria-pressed="false">베이지</button>
+          </div>
+        </div>
+
+        <div class="grid-2 keep-2">
+          <div class="field">
+            <label for="bgColor">배경색 직접 선택</label>
+            <input id="bgColor" type="color" value="#000000">
+          </div>
+          <div class="field">
+            <label for="textColor">글자 색</label>
+            <input id="textColor" type="color" value="#fffdf7">
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <span class="label">대사 색 사용</span>
+            <div class="segmented two" aria-label="대사 색 사용">
+              <button class="chip" data-dialog-mode="off" aria-pressed="true">끔</button>
+              <button class="chip" data-dialog-mode="on" aria-pressed="false">켬</button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="dialogColor">대사 색 (따옴표 안)</label>
+            <input id="dialogColor" type="color" value="#ffd27f">
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="fit">이미지 맞춤</label>
+            <select id="fit">
+              <option value="cover">채우기</option>
+              <option value="contain">전체 보이기</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="label">이미지 밝기</span>
+          <div class="segmented two" aria-label="이미지 밝기">
+            <button class="chip" data-dim-mode="original" aria-pressed="false">원본</button>
+            <button class="chip" data-dim-mode="dark" aria-pressed="true">어둡게</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="row">
+            <span class="label">어둡게 농도</span>
+            <span class="value" id="dimValue">42%</span>
+          </div>
+          <input id="dim" type="range" min="0" max="72" value="42">
+        </div>
+
+        <div class="field">
+          <div class="row">
+            <span class="label">텍스트 그림자</span>
+            <span class="value" id="shadowValue">42%</span>
+          </div>
+          <input id="textShadow" type="range" min="0" max="80" value="42">
+        </div>
+
+        <div class="grid-2 keep-2">
+          <div class="field">
+            <label for="gradColor1">그라데이션 색 1</label>
+            <input id="gradColor1" type="color" value="#000000">
+          </div>
+          <div class="field">
+            <label for="gradColor2">그라데이션 색 2</label>
+            <input id="gradColor2" type="color" value="#000000">
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="gradDir">그라데이션 방향</label>
+            <select id="gradDir">
+              <option value="bottom">아래로 진하게</option>
+              <option value="top">위로 진하게</option>
+              <option value="both">위·아래 진하게</option>
+              <option value="left">왼쪽으로 진하게</option>
+              <option value="right">오른쪽으로 진하게</option>
+              <option value="full">전체 균일</option>
+            </select>
+          </div>
+          <div class="field">
+            <div class="row">
+              <span class="label">그라데이션 농도</span>
+              <span class="value" id="gradOpacityValue">0%</span>
+            </div>
+            <input id="gradOpacity" type="range" min="0" max="100" value="0">
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>테두리 · 워터마크</h2>
+
+        <div class="grid-2 keep-2">
+          <div class="field">
+            <div class="row">
+              <span class="label">테두리 두께</span>
+              <span class="value" id="borderWidthValue">0px</span>
+            </div>
+            <input id="borderWidth" type="range" min="0" max="40" value="0">
+          </div>
+          <div class="field">
+            <label for="borderColor">테두리 색</label>
+            <input id="borderColor" type="color" value="#fffdf7">
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <div class="row">
+              <span class="label">테두리 여백</span>
+              <span class="value" id="borderInsetValue">0px</span>
+            </div>
+            <input id="borderInset" type="range" min="0" max="80" value="0">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="watermark">워터마크 / 서명</label>
+          <input id="watermark" type="text" value="" placeholder="예: @myID">
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="watermarkPos">워터마크 위치</label>
+            <select id="watermarkPos">
+              <option value="br">오른쪽 아래</option>
+              <option value="bl">왼쪽 아래</option>
+              <option value="tr">오른쪽 위</option>
+              <option value="tl">왼쪽 위</option>
+              <option value="bc">아래 가운데</option>
+              <option value="tc">위 가운데</option>
+            </select>
+          </div>
+          <div class="field">
+            <div class="row">
+              <span class="label">워터마크 농도</span>
+              <span class="value" id="watermarkOpacityValue">50%</span>
+            </div>
+            <input id="watermarkOpacity" type="range" min="10" max="100" value="50">
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>프리셋</h2>
+        <p class="sub">현재 설정(글꼴·색·크기·테두리 등)을 저장해두고 다시 불러올 수 있어요. 본문 내용과 배경 이미지는 저장되지 않아요.</p>
+        <div class="grid-2">
+          <div class="field">
+            <label for="presetSelect">저장된 프리셋</label>
+            <select id="presetSelect"><option value="">— 선택 —</option></select>
+          </div>
+          <div class="field">
+            <label for="presetName">새 프리셋 이름</label>
+            <input id="presetName" type="text" value="" placeholder="예: 어두운 명조">
+          </div>
+        </div>
+        <div class="actions field">
+          <button class="btn secondary" id="presetLoadBtn" type="button">불러오기</button>
+          <button class="btn" id="presetSaveBtn" type="button">저장</button>
+        </div>
+        <div class="actions field">
+          <button class="btn secondary" id="presetDeleteBtn" type="button">선택 삭제</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="field">
+          <button class="btn primary" id="saveBtn" type="button" style="width:100%;">PNG 저장</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="preview-wrap" aria-label="미리보기">
+      <div class="preview-head">
+        <div>
+          <h2>미리보기</h2>
+          <p class="sub">저장 파일은 화면보다 더 선명한 2배 해상도로 만들어져요.</p>
+        </div>
+        <div class="counter" id="counter">0자</div>
+      </div>
+      <div class="stage">
+        <canvas id="canvas" width="1080" height="1350"></canvas>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const canvas = document.querySelector("#canvas");
+    const ctx = canvas.getContext("2d");
+    const inputs = {
+      quote: document.querySelector("#quote"),
+      creator: document.querySelector("#creator"),
+      character: document.querySelector("#character"),
+      font: document.querySelector("#font"),
+      align: document.querySelector("#align"),
+      fontSize: document.querySelector("#fontSize"),
+      lineHeight: document.querySelector("#lineHeight"),
+      padding: document.querySelector("#padding"),
+      tracking: document.querySelector("#tracking"),
+      imageInput: document.querySelector("#imageInput"),
+      fit: document.querySelector("#fit"),
+      bgColor: document.querySelector("#bgColor"),
+      textColor: document.querySelector("#textColor"),
+      dialogColor: document.querySelector("#dialogColor"),
+      emphColor: document.querySelector("#emphColor"),
+      hiliteColor: document.querySelector("#hiliteColor"),
+      customW: document.querySelector("#customW"),
+      customH: document.querySelector("#customH"),
+      dim: document.querySelector("#dim"),
+      textShadow: document.querySelector("#textShadow"),
+      creditAlign: document.querySelector("#creditAlign"),
+      creditSep: document.querySelector("#creditSep"),
+      creditSize: document.querySelector("#creditSize"),
+      creditColor: document.querySelector("#creditColor"),
+      dividerColor: document.querySelector("#dividerColor"),
+      dialogBarColor: document.querySelector("#dialogBarColor"),
+      dividerGap: document.querySelector("#dividerGap"),
+      dividerLineGap: document.querySelector("#lineGap"),
+      gradColor1: document.querySelector("#gradColor1"),
+      gradColor2: document.querySelector("#gradColor2"),
+      gradDir: document.querySelector("#gradDir"),
+      gradOpacity: document.querySelector("#gradOpacity"),
+      borderWidth: document.querySelector("#borderWidth"),
+      borderColor: document.querySelector("#borderColor"),
+      borderInset: document.querySelector("#borderInset"),
+      watermark: document.querySelector("#watermark"),
+      watermarkPos: document.querySelector("#watermarkPos"),
+      watermarkOpacity: document.querySelector("#watermarkOpacity"),
+    };
+    const labels = {
+      fontSize: document.querySelector("#fontSizeValue"),
+      lineHeight: document.querySelector("#lineHeightValue"),
+      creditSize: document.querySelector("#creditSizeValue"),
+      dividerGap: document.querySelector("#dividerGapValue"),
+      dividerLineGap: document.querySelector("#lineGapValue"),
+      padding: document.querySelector("#paddingValue"),
+      tracking: document.querySelector("#trackingValue"),
+      dim: document.querySelector("#dimValue"),
+      textShadow: document.querySelector("#shadowValue"),
+      counter: document.querySelector("#counter"),
+      gradOpacity: document.querySelector("#gradOpacityValue"),
+      borderWidth: document.querySelector("#borderWidthValue"),
+      borderInset: document.querySelector("#borderInsetValue"),
+      watermarkOpacity: document.querySelector("#watermarkOpacityValue"),
+    };
+    const quoteEditor = document.querySelector("#quoteEditor");
+    const formatColorPanel = document.querySelector("#formatColorPanel");
+    const formatColorLabel = document.querySelector("#formatColorLabel");
+    const formatColorNote = document.querySelector("#formatColorNote");
+    const formatMarkers = {
+      emph: ["**", "**"],
+      bold: ["==", "=="],
+      italic: ["//", "//"],
+      hilite: ["!!", "!!"],
+      quote: [">>", ">>"],
+    };
+
+    const state = {
+      ratio: "4:5",
+      dimMode: "dark",
+      image: null,
+      indentOff: false,
+      dialogMode: "off",
+      emphMode: "off",
+      hiliteMode: "off",
+      bodyBold: false,
+      bodyItalic: false,
+      bodyThin: false,
+      dialogBold: false,
+      dialogItalic: false,
+      dialogBar: false,
+      creditSizeMode: "auto",
+      dividerGapMode: "auto",
+      dividerLineGapMode: "auto",
+      dialogThin: false,
+      divider: false,
+    };
+    let dialogBarColorCustom = inputs.dialogBarColor.value !== inputs.dialogColor.value;
+
+    function syncDialogBarColor(force = false) {
+      if (force || !dialogBarColorCustom) {
+        inputs.dialogBarColor.value = inputs.dialogColor.value;
+      }
+    }
+
+    const ratios = {
+      "1:1": [1080, 1080],
+      "4:5": [1080, 1350],
+      "16:9": [1600, 900],
+      "twitter": [1500, 500],
+    };
+
+    const fontFamilies = {
+      batang: `"Batang", "AppleMyungjo", "KoPub Batang", serif`,
+      myeongjo: `"Nanum Myeongjo", "Noto Serif KR", "AppleMyungjo", "Batang", serif`,
+      pretendard: `"Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", Arial, sans-serif`,
+      notoSerif: `"Noto Serif KR", "Source Han Serif K", "AppleMyungjo", "Batang", serif`,
+      notoSans: `"Noto Sans KR", "Source Han Sans K", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif`,
+      nanumMyeongjo: `"Nanum Myeongjo", "AppleMyungjo", "Batang", serif`,
+      nanumGothic: `"Nanum Gothic", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif`,
+      kopubBatang: `"KoPub Batang", "KoPubWorld Batang", "Batang", "AppleMyungjo", serif`,
+      gowunBatang: `"Gowun Batang", "GowunBatang", "AppleMyungjo", "Batang", serif`,
+      gowunDodum: `"Gowun Dodum", "GowunDodum", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif`,
+      maruburi: `"MaruBuri", "Maru Buri", "Noto Serif KR", "AppleMyungjo", "Batang", serif`,
+      dunggeunmo: `"DungGeunMo", "Apple SD Gothic Neo", "Malgun Gothic", monospace`,
+      sans: `"Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", Arial, sans-serif`,
+    };
+
+    function hexToRgb(hex) {
+      const h = hex.replace("#", "");
+      const v = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+      return [
+        parseInt(v.slice(0, 2), 16),
+        parseInt(v.slice(2, 4), 16),
+        parseInt(v.slice(4, 6), 16),
+      ];
+    }
+
+    function rgba(hex, alpha) {
+      const [r, g, b] = hexToRgb(hex);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function markerForFormat(format) {
+      if (format === "emph") return [EMPH_MARK, EMPH_MARK];
+      if (format === "bold") return [BOLD_MARK, BOLD_MARK];
+      if (format === "italic") return [ITALIC_MARK, ITALIC_MARK];
+      if (format === "hilite") return [HILITE_MARK, HILITE_MARK];
+      if (format === "quote") return [QUOTE_MARK, QUOTE_MARK];
+      return null;
+    }
+
+    function updateQuoteEditorPreviewStyle() {
+      quoteEditor.style.setProperty("--editor-emph-color", inputs.emphColor.value);
+      quoteEditor.style.setProperty("--editor-hilite-color", rgba(inputs.hiliteColor.value, 0.68));
+      quoteEditor.style.setProperty("--editor-quote-color", inputs.dialogBarColor.value || inputs.dialogColor.value);
+    }
+
+    function nodeToTaggedText(node) {
+      if (node.nodeType === Node.TEXT_NODE) return node.nodeValue || "";
+      if (node.nodeType !== Node.ELEMENT_NODE) return "";
+      if (node.tagName === "BR") return "\n";
+
+      let text = "";
+      node.childNodes.forEach((child) => {
+        text += nodeToTaggedText(child);
+      });
+
+      const isBlock = node !== quoteEditor && ["DIV", "P"].includes(node.tagName);
+      if (isBlock && text && !text.endsWith("\n")) text += "\n";
+
+      const format = node.dataset?.format;
+      const marker = markerForFormat(format);
+      if (marker && text) text = marker[0] + text + marker[1];
+      return text;
+    }
+
+    function syncQuoteSourceFromEditor() {
+      inputs.quote.value = nodeToTaggedText(quoteEditor).replace(/\n$/, "");
+    }
+
+    function getQuoteEditorRange() {
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) return null;
+      const range = selection.getRangeAt(0);
+      if (!quoteEditor.contains(range.commonAncestorContainer)) return null;
+      return range;
+    }
+
+    function selectNodeContents(node) {
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+
+    function insertPlainTextAtSelection(text) {
+      quoteEditor.focus();
+      const selection = window.getSelection();
+      const range = getQuoteEditorRange() || document.createRange();
+      if (!getQuoteEditorRange()) {
+        range.selectNodeContents(quoteEditor);
+        range.collapse(false);
+      }
+      range.deleteContents();
+      const node = document.createTextNode(text);
+      range.insertNode(node);
+      range.setStartAfter(node);
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+
+    function closestFormatNode(node, format) {
+      let el = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
+      while (el && el !== quoteEditor) {
+        if (el.dataset?.format === format) return el;
+        el = el.parentElement;
+      }
+      return null;
+    }
+
+    function unwrapFormatNode(node) {
+      const parent = node.parentNode;
+      const first = node.firstChild;
+      const last = node.lastChild;
+      const range = document.createRange();
+      if (!parent || !first || !last) {
+        node.remove();
+        range.selectNodeContents(quoteEditor);
+        range.collapse(false);
+        return range;
+      }
+      while (node.firstChild) {
+        parent.insertBefore(node.firstChild, node);
+      }
+      parent.removeChild(node);
+      range.setStartBefore(first);
+      range.setEndAfter(last);
+      return range;
+    }
+
+    function showFormatColorPanel(format) {
+      const labels = {
+        emph: ["강조 색", "강조 버튼 색이에요."],
+        hilite: ["형광펜 색", "형광펜 버튼 색이에요."],
+        quote: ["인용 바 색", "인용 바 색이에요."],
+      };
+      if (!labels[format]) {
+        formatColorPanel.classList.remove("is-open");
+        return;
+      }
+
+      document.querySelectorAll(".format-color-input").forEach((input) => {
+        input.hidden = input.dataset.colorFormat !== format;
+      });
+      const activeInput = document.querySelector(`[data-color-format="${format}"]`);
+      formatColorLabel.textContent = labels[format][0];
+      formatColorLabel.setAttribute("for", activeInput.id);
+      formatColorNote.textContent = labels[format][1];
+      formatColorPanel.classList.add("is-open");
+    }
+
+    function setCanvasRatio() {
+      let w, h;
+      if (state.ratio === "custom") {
+        w = Math.min(4000, Math.max(100, Number(inputs.customW.value) || 1080));
+        h = Math.min(4000, Math.max(100, Number(inputs.customH.value) || 1350));
+      } else {
+        [w, h] = ratios[state.ratio];
+      }
+      canvas.width = w;
+      canvas.height = h;
+    }
+
+    function drawImageCover(img, fit) {
+      const cw = canvas.width;
+      const ch = canvas.height;
+      const scale = fit === "contain"
+        ? Math.min(cw / img.width, ch / img.height)
+        : Math.max(cw / img.width, ch / img.height);
+      const dw = img.width * scale;
+      const dh = img.height * scale;
+      const dx = (cw - dw) / 2;
+      const dy = (ch - dh) / 2;
+      ctx.fillStyle = inputs.bgColor.value;
+      ctx.fillRect(0, 0, cw, ch);
+      ctx.drawImage(img, dx, dy, dw, dh);
+    }
+
+    function drawGradient() {
+      const op = Number(inputs.gradOpacity.value) / 100;
+      if (op <= 0) return;
+      const w = canvas.width;
+      const h = canvas.height;
+      const c1 = inputs.gradColor1.value;
+      const c2 = inputs.gradColor2.value;
+      const dir = inputs.gradDir.value;
+      let g;
+
+      if (dir === "full") {
+        // 균일한 오버레이 (단색 틴트)
+        ctx.save();
+        ctx.fillStyle = rgba(c1, op);
+        ctx.fillRect(0, 0, w, h);
+        ctx.restore();
+        return;
+      }
+
+      if (dir === "left" || dir === "right") {
+        g = ctx.createLinearGradient(0, 0, w, 0);
+      } else {
+        g = ctx.createLinearGradient(0, 0, 0, h);
+      }
+
+      const a = op;
+      if (dir === "bottom") {
+        g.addColorStop(0, rgba(c1, 0));
+        g.addColorStop(0.45, rgba(c1, a * 0.25));
+        g.addColorStop(1, rgba(c2, a));
+      } else if (dir === "top") {
+        g.addColorStop(0, rgba(c1, a));
+        g.addColorStop(0.55, rgba(c1, a * 0.25));
+        g.addColorStop(1, rgba(c2, 0));
+      } else if (dir === "both") {
+        g.addColorStop(0, rgba(c1, a));
+        g.addColorStop(0.5, rgba(c1, 0));
+        g.addColorStop(1, rgba(c2, a));
+      } else if (dir === "left") {
+        g.addColorStop(0, rgba(c1, a));
+        g.addColorStop(0.55, rgba(c1, a * 0.2));
+        g.addColorStop(1, rgba(c2, 0));
+      } else if (dir === "right") {
+        g.addColorStop(0, rgba(c1, 0));
+        g.addColorStop(0.45, rgba(c1, a * 0.2));
+        g.addColorStop(1, rgba(c2, a));
+      }
+
+      ctx.save();
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+      ctx.restore();
+    }
+
+    function roundRectPath(x, y, w, h, r) {
+      const rr = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + rr, y);
+      ctx.arcTo(x + w, y, x + w, y + h, rr);
+      ctx.arcTo(x + w, y + h, x, y + h, rr);
+      ctx.arcTo(x, y + h, x, y, rr);
+      ctx.arcTo(x, y, x + w, y, rr);
+      ctx.closePath();
+    }
+
+    function drawBorder() {
+      const bw = Number(inputs.borderWidth.value);
+      if (bw <= 0) return;
+      const inset = Number(inputs.borderInset.value);
+      const w = canvas.width;
+      const h = canvas.height;
+      const off = inset + bw / 2;
+      ctx.save();
+      ctx.strokeStyle = inputs.borderColor.value;
+      ctx.lineWidth = bw;
+      ctx.strokeRect(off, off, w - off * 2, h - off * 2);
+      ctx.restore();
+    }
+
+    function drawWatermark() {
+      const text = inputs.watermark.value.trim();
+      if (!text) return;
+      const w = canvas.width;
+      const h = canvas.height;
+      const pos = inputs.watermarkPos.value;
+      const op = Number(inputs.watermarkOpacity.value) / 100;
+      const size = Math.max(18, Math.round(Math.min(w, h) * 0.028));
+      const margin = Math.round(Math.min(w, h) * 0.04);
+
+      ctx.save();
+      ctx.font = `700 ${size}px ${fontFamilies.sans}`;
+      ctx.fillStyle = rgba(inputs.textColor.value, op);
+      ctx.shadowColor = "rgba(0,0,0,0.5)";
+      ctx.shadowBlur = 6;
+
+      let x, y, align, baseline;
+      if (pos.includes("l")) { x = margin; align = "left"; }
+      else if (pos.includes("r")) { x = w - margin; align = "right"; }
+      else { x = w / 2; align = "center"; }
+
+      if (pos[0] === "t") { y = margin; baseline = "top"; }
+      else { y = h - margin; baseline = "bottom"; }
+
+      ctx.textAlign = align;
+      ctx.textBaseline = baseline;
+      ctx.fillText(text, x, y);
+      ctx.restore();
+    }
+
+    // 따옴표 기준으로 한 줄을 [{ch, inQuote}] 세그먼트로 분해.
+    // inQuoteStart: 이 줄이 시작될 때 이미 따옴표 안인지 (여러 줄 대사 지원)
+    // 반환: { segs, inQuoteEnd }
+    // 본문 텍스트의 **강조** 마커를 제어문자(\u0001)로 치환.
+    // \u0001 을 만나면 강조 on/off 토글. 짝이 안 맞는 ** 는 일반 텍스트로 둠.
+    const EMPH_MARK = "\u0001"; // 강조 색 토글 마커
+    const BOLD_MARK = "\u0002"; // 볼드 토글 마커
+    const HILITE_MARK = "\u0003"; // 형광펜 토글 마커
+    const QUOTE_MARK = "\u0004"; // 인용 바 토글 마커
+    const ITALIC_MARK = "\u0005"; // 기울임 토글 마커
+
+    // **...** -> 강조색, ==...== -> 볼드, //...// -> 기울임, !!...!! -> 형광펜, >>...>> -> 인용 바.
+    // 정규식으로 '짝이 맞는' 구간만 마커로 감싸므로, 짝 안 맞는 표시는 그냥 텍스트로 남아
+    // 그 뒤 전체가 물드는 문제가 없음.
+    function encodeMarkers(text) {
+      let out = text;
+      if (state.emphMode === "on") {
+        // 짝이 맞는 **내용** 만 강조 마커로 바꿔 캔버스에 그릴 때 적용.
+        out = out.replace(/\*\*([\s\S]+?)\*\*/g, (m, inner) => EMPH_MARK + inner + EMPH_MARK);
+      } else {
+        out = out.split("**").join(""); // 강조 꺼지면 ** 표시 제거
+      }
+      if (state.hiliteMode === "on") {
+        out = out.replace(/!!([\s\S]+?)!!/g, (m, inner) => HILITE_MARK + inner + HILITE_MARK);
+      } else {
+        out = out.split("!!").join(""); // 형광펜 꺼지면 !! 표시 제거
+      }
+      // 인용 바: >>내용>> (줄바꿈 포함 가능 → 여러 줄 인용)
+      out = out.replace(/>>([\s\S]+?)>>/g, (m, inner) => QUOTE_MARK + inner + QUOTE_MARK);
+      // 볼드: ==내용== (항상 적용)
+      out = out.replace(/==([\s\S]+?)==/g, (m, inner) => BOLD_MARK + inner + BOLD_MARK);
+      // 기울임: //내용// (항상 적용)
+      out = out.replace(/\/\/([\s\S]+?)\/\//g, (m, inner) => ITALIC_MARK + inner + ITALIC_MARK);
+      return out;
+    }
+
+    // 한 줄을 따옴표(inQuote)·강조(emph)·볼드(emBold)·형광펜(hilite)·인용(quoted) 상태가 매겨진 세그먼트로 분해.
+    function splitQuoteSegments(line, inQuoteStart, emphStart, boldStart, hiliteStart, quotedStart, italicStart) {
+      const openers = ['"', '\u201c']; // " 와 “
+      const closers = ['"', '\u201d']; // " 와 ”
+      const chars = [...line];
+      const segs = [];
+      let inQuote = inQuoteStart;
+      let emph = emphStart;
+      let emBold = boldStart;
+      let hilite = hiliteStart;
+      let quoted = quotedStart;
+      let italic = italicStart;
+      chars.forEach((ch) => {
+        if (ch === EMPH_MARK) { emph = !emph; return; }
+        if (ch === BOLD_MARK) { emBold = !emBold; return; }
+        if (ch === HILITE_MARK) { hilite = !hilite; return; }
+        if (ch === QUOTE_MARK) { quoted = !quoted; return; }
+        if (ch === ITALIC_MARK) { italic = !italic; return; }
+        if (!inQuote && openers.includes(ch)) {
+          segs.push({ ch, inQuote: true, emph, emBold, hilite, quoted, italic });
+          inQuote = true;
+        } else if (inQuote && closers.includes(ch)) {
+          segs.push({ ch, inQuote: true, emph, emBold, hilite, quoted, italic });
+          inQuote = false;
+        } else {
+          segs.push({ ch, inQuote, emph, emBold, hilite, quoted, italic });
+        }
+      });
+      return { segs, inQuoteEnd: inQuote, emphEnd: emph, boldEnd: emBold, hiliteEnd: hilite, quotedEnd: quoted, italicEnd: italic };
+    }
+
+    function buildFont(size, bold, italic, thin) {
+      const family = fontFamilies[inputs.font.value];
+      const style = italic ? "italic " : "";
+      const weight = bold ? "800 " : (thin ? "300 " : "");
+      return `${style}${weight}${size}px ${family}`;
+    }
+
+    function quoteLayoutFor(fontSize) {
+      return {
+        barWidth: Math.max(3, fontSize * 0.08),
+        inset: Math.max(24, Math.round(fontSize * 0.8)),
+      };
+    }
+
+    function quoteLineState(line, quotedStart) {
+      const seg = splitQuoteSegments(line, false, false, false, false, quotedStart, false);
+      return {
+        hasQuoted: quotedStart || seg.segs.some((s) => s.quoted),
+        quotedEnd: seg.quotedEnd,
+      };
+    }
+
+    function applyLetterSpacing(line, x, y, tracking, align, baseColor, dialogColor, emphColor, hiliteColor, inQuoteStart, emphStart, boldStart, hiliteStart, quotedStart, italicStart, fontSize, justifyWidth) {
+      const useDialog = state.dialogMode === "on";
+      // 대사 스타일(굵게/기울임/얇게) 중 하나라도 켜져 있으면 따옴표 인식이 필요
+      const useDialogStyle = state.dialogBold || state.dialogItalic || state.dialogThin;
+      const hasMarkers = line.indexOf(EMPH_MARK) !== -1 || line.indexOf(BOLD_MARK) !== -1 || line.indexOf(HILITE_MARK) !== -1 || line.indexOf(QUOTE_MARK) !== -1 || line.indexOf(ITALIC_MARK) !== -1;
+      let segs, inQuoteEnd, emphEnd, boldEnd, hiliteEnd, quotedEnd, italicEnd;
+      // 대사색/대사스타일/마커/줄 시작 상태 중 하나라도 관여하면 분해
+      if (useDialog || useDialogStyle || hasMarkers || emphStart || boldStart || hiliteStart || quotedStart || italicStart) {
+        ({ segs, inQuoteEnd, emphEnd, boldEnd, hiliteEnd, quotedEnd, italicEnd } = splitQuoteSegments(line, inQuoteStart, emphStart, boldStart, hiliteStart, quotedStart, italicStart));
+      } else {
+        segs = [...line].map((ch) => ({ ch, inQuote: false, emph: false, emBold: false, hilite: false, quoted: false, italic: false }));
+        inQuoteEnd = false;
+        emphEnd = false;
+        boldEnd = false;
+        hiliteEnd = false;
+        quotedEnd = false;
+        italicEnd = false;
+      }
+
+      // 본문(나레이션)과 대사 스타일을 완전히 분리. ==볼드==면 강제 볼드.
+      const fontFor = (seg) => {
+        if (seg.inQuote) {
+          return buildFont(fontSize, state.dialogBold || seg.emBold, state.dialogItalic || seg.italic, state.dialogThin && !seg.emBold);
+        }
+        return buildFont(fontSize, state.bodyBold || seg.emBold, state.bodyItalic || seg.italic, state.bodyThin && !seg.emBold);
+      };
+      // 색 우선순위: 강조 > 대사 > 기본. 단 강조색은 강조모드 켜졌을 때만.
+      const colorFor = (seg) => {
+        if (seg.emph && state.emphMode === "on") return emphColor;
+        if (seg.inQuote && useDialog) return dialogColor;
+        return baseColor;
+      };
+
+      // 전체 폭 측정 (글자별 폰트 + 자간 포함)
+      let totalWidth = 0;
+      segs.forEach((seg, index) => {
+        if (index) totalWidth += tracking;
+        ctx.font = fontFor(seg);
+        totalWidth += ctx.measureText(seg.ch).width;
+      });
+
+      // 양쪽 정렬(워드 방식): 추가 폭을 '단어 사이 공백'에만 분배해 글자는 안 벌어지게.
+      let spaceExtra = 0;
+      const isSpace = (ch) => ch === " " || ch === "\u3000" || ch === "\t";
+      if (justifyWidth && segs.length > 1) {
+        const slack = justifyWidth - totalWidth;
+        let lastNonSpace = -1;
+        for (let i = segs.length - 1; i >= 0; i--) {
+          if (!isSpace(segs[i].ch)) { lastNonSpace = i; break; }
+        }
+        let spaceCount = 0;
+        for (let i = 0; i <= lastNonSpace; i++) {
+          if (isSpace(segs[i].ch)) spaceCount++;
+        }
+        if (slack > 0 && spaceCount > 0) spaceExtra = slack / spaceCount;
+      }
+
+      // 각 글자의 시작 x와 폭을 미리 계산 (형광펜 배경/글자 두 패스에 공용)
+      let cursor = align === "center" ? x - totalWidth / 2 : x;
+      const placed = segs.map((seg, index) => {
+        if (index) cursor += tracking;
+        ctx.font = fontFor(seg);
+        const wseg = ctx.measureText(seg.ch).width;
+        const startX = cursor;
+        cursor += wseg;
+        if (spaceExtra && isSpace(seg.ch)) cursor += spaceExtra;
+        return { seg, x: startX, w: wseg };
+      });
+
+      const savedAlign = ctx.textAlign;
+      ctx.textAlign = "left"; // 글자별로 직접 배치
+
+      // 1패스: 형광펜 배경(글자 뒤). 연속 구간을 묶어 한 사각형으로.
+      if (state.hiliteMode === "on") {
+        const padX = fontSize * 0.06;
+        const top = y - fontSize * 0.82;
+        const hgt = fontSize * 1.02;
+        let runStart = null, runEnd = null;
+        const flush = () => {
+          if (runStart == null) return;
+          ctx.save();
+          ctx.fillStyle = hiliteColor;
+          ctx.globalAlpha = 0.55; // 형광펜 느낌의 반투명
+          ctx.shadowColor = "transparent";
+          ctx.shadowBlur = 0;
+          ctx.fillRect(runStart - padX, top, (runEnd - runStart) + padX * 2, hgt);
+          ctx.restore();
+          runStart = null;
+        };
+        placed.forEach((p) => {
+          if (p.seg.hilite) {
+            if (runStart == null) runStart = p.x;
+            runEnd = p.x + p.w;
+          } else {
+            flush();
+          }
+        });
+        flush();
+      }
+
+      // 2패스: 글자
+      placed.forEach((p) => {
+        ctx.font = fontFor(p.seg);
+        ctx.fillStyle = colorFor(p.seg);
+        ctx.fillText(p.seg.ch, p.x, y);
+      });
+
+      ctx.textAlign = savedAlign;
+      return { inQuoteEnd, emphEnd, boldEnd, hiliteEnd, quotedEnd, italicEnd };
+    }
+
+    function measureWithTracking(text, tracking) {
+      const clean = text.split(EMPH_MARK).join("").split(BOLD_MARK).join("").split(HILITE_MARK).join("").split(QUOTE_MARK).join("").split(ITALIC_MARK).join(""); // 마커는 폭에서 제외
+      const chars = [...clean];
+      const basic = ctx.measureText(clean).width;
+      return basic + Math.max(0, chars.length - 1) * tracking;
+    }
+
+    function wrapLine(line, maxWidth, tracking, quoteInset = 0, quotedStart = false) {
+      if (!line.trim()) {
+        return { lines: [""], quotedEnd: quoteLineState(line, quotedStart).quotedEnd };
+      }
+      const units = line.includes(" ") ? line.split(/(\s+)/) : [...line];
+      const wrapped = [];
+      let current = "";
+      let currentQuoted = quotedStart;
+
+      units.forEach((unit) => {
+        const next = current + unit;
+        const nextState = quoteLineState(next, currentQuoted);
+        const lineMaxWidth = state.dialogBar && nextState.hasQuoted
+          ? Math.max(maxWidth * 0.4, maxWidth - quoteInset)
+          : maxWidth;
+        if (measureWithTracking(next, tracking) <= lineMaxWidth || !current) {
+          current = next;
+          return;
+        }
+        const pushed = current.trimEnd();
+        wrapped.push(pushed);
+        currentQuoted = quoteLineState(pushed, currentQuoted).quotedEnd;
+        current = unit.trimStart();
+      });
+
+      if (current) wrapped.push(current.trimEnd());
+      return {
+        lines: wrapped,
+        quotedEnd: wrapped.reduce((quoted, ln) => quoteLineState(ln, quoted).quotedEnd, quotedStart),
+      };
+    }
+
+    // 각 줄에 isParaEnd(문단의 마지막 줄인지)를 매겨 반환.
+    // 원문에서 \n 직전 줄 = 문단 끝. 자동 줄바꿈으로 이어진 줄은 문단 끝이 아님.
+    function wrapTextLines(text, maxWidth, fontSize, tracking) {
+      ctx.font = buildFont(fontSize, state.bodyBold, state.bodyItalic, state.bodyThin);
+      const result = [];
+      const paragraphs = text.split("\n");
+      const quoteInset = state.dialogBar ? quoteLayoutFor(fontSize).inset : 0;
+      let quoted = false;
+      paragraphs.forEach((para) => {
+        const wrapped = wrapLine(para, maxWidth, tracking, quoteInset, quoted);
+        wrapped.lines.forEach((ln, i) => {
+          result.push({ text: ln, isParaEnd: i === wrapped.lines.length - 1 });
+        });
+        quoted = wrapped.quotedEnd;
+      });
+      return result;
+    }
+
+    function wrapText(text, maxWidth, fontSize, tracking) {
+      return wrapTextLines(text, maxWidth, fontSize, tracking).map((l) => l.text);
+    }
+
+    function fitFontSize(text, maxWidth, maxHeight, baseSize, lineHeight, tracking) {
+      let size = baseSize;
+      while (size >= 12) {
+        const lines = wrapTextLines(text, maxWidth, size, tracking);
+        const height = lines.length * size * lineHeight;
+        if (height <= maxHeight) return { size, lines };
+        size -= 1;
+      }
+      return { size: 12, lines: wrapTextLines(text, maxWidth, 12, tracking) };
+    }
+
+    function drawTextBlock() {
+      syncQuoteSourceFromEditor();
+      const w = canvas.width;
+      const h = canvas.height;
+      const pad = Number(inputs.padding.value);
+      const baseSize = Number(inputs.fontSize.value);
+      const lineHeight = Number(inputs.lineHeight.value);
+      const tracking = Number(inputs.tracking.value);
+      const align = inputs.align.value;
+      let text = inputs.quote.value.trim();
+      if (state.indentOff) {
+        text = text.split("\n").map((l) => l.replace(/^[\s\u3000]+/, "")).join("\n");
+      }
+      // **강조**·==볼드== 마커 처리
+      text = encodeMarkers(text);
+      const creator = inputs.creator.value.trim();
+      const character = inputs.character.value.trim();
+      const sepChar = inputs.creditSep.value;
+      // 공백 선택 시엔 기호 없이 한 칸만, 그 외엔 양옆 여백 포함
+      const sep = sepChar === " " ? "   " : `  ${sepChar}  `;
+      const credit = [character, creator].filter(Boolean).join(sep);
+      const footerSize = state.creditSizeMode === "manual"
+        ? Number(inputs.creditSize.value)
+        : Math.max(22, fitFooterSize(baseSize));
+      const baseFooterGap = credit ? Math.max(62, baseSize * 1.55) : 0;
+      // 구분선이 켜지면 본문과 출처 사이를 벌림. 수동이면 슬라이더 값 사용.
+      let footerGap;
+      if (credit && state.divider) {
+        footerGap = state.dividerGapMode === "manual"
+          ? baseFooterGap + Number(inputs.dividerGap.value)
+          : baseFooterGap + Math.max(footerSize * 1.4, 40);
+      } else {
+        footerGap = baseFooterGap;
+      }
+      const maxWidth = w - pad * 2;
+      const maxHeight = h - pad * 2 - footerGap - footerSize;
+      const fit = fitFontSize(text, maxWidth, maxHeight, baseSize, lineHeight, tracking);
+      const lineGap = fit.size * lineHeight;
+      const textHeight = fit.lines.length > 0 ? (fit.lines.length - 1) * lineGap + fit.size : 0;
+      const groupHeight = textHeight + footerGap + (credit ? footerSize : 0);
+      const x = align === "center" ? w / 2 : pad;
+      let y = Math.max(pad, (h - groupHeight) / 2) + fit.size;
+
+      ctx.save();
+      ctx.font = `${fit.size}px ${fontFamilies[inputs.font.value]}`;
+      ctx.textAlign = align === "center" ? "center" : "left";
+      ctx.textBaseline = "alphabetic";
+      ctx.fillStyle = inputs.textColor.value;
+      ctx.shadowColor = `rgba(0, 0, 0, ${Number(inputs.textShadow.value) / 100})`;
+      ctx.shadowBlur = fit.size * 0.16;
+      ctx.shadowOffsetY = 2;
+
+      const baseColor = inputs.textColor.value;
+      const dialogColor = inputs.dialogColor.value;
+      const emphColor = inputs.emphColor.value;
+      const hiliteColor = inputs.hiliteColor.value;
+      const isJustify = align === "justify";
+      const quoteLayout = quoteLayoutFor(fit.size);
+
+      // 인용 바: >>내용>> 으로 감싼 구간이 있는 줄에 세로 바 (줄 간 상태 이어감)
+      if (state.dialogBar) {
+        let qd = false; // quoted 상태
+        let barTop = null, barBottom = null;
+        let yy = y;
+        const barColor = inputs.dialogBarColor.value;
+        const flushBar = () => {
+          if (barTop == null) return;
+          ctx.save();
+          ctx.fillStyle = barColor;
+          ctx.globalAlpha = 0.7;
+          ctx.shadowColor = "transparent";
+          ctx.fillRect(pad, barTop, quoteLayout.barWidth, barBottom - barTop);
+          ctx.restore();
+          barTop = null;
+        };
+        fit.lines.forEach((lineObj) => {
+          const seg = splitQuoteSegments(lineObj.text, false, false, false, false, qd, false);
+          const hasQuoted = qd || seg.segs.some((s) => s.quoted);
+          if (hasQuoted) {
+            const top = yy - fit.size * 0.82;
+            const bot = yy + fit.size * 0.2;
+            if (barTop == null) barTop = top;
+            barBottom = bot;
+          } else {
+            flushBar();
+          }
+          qd = seg.quotedEnd;
+          yy += lineGap;
+        });
+        flushBar();
+      }
+
+      let inQuote = false;
+      let emph = false;
+      let emBold = false;
+      let hilite = false;
+      let quoted = false;
+      let italic = false;
+      fit.lines.forEach((lineObj) => {
+        const line = lineObj.text;
+        const qState = quoteLineState(line, quoted);
+        const isQuotedLine = state.dialogBar && qState.hasQuoted;
+        const effectiveMaxWidth = isQuotedLine ? Math.max(maxWidth * 0.4, maxWidth - quoteLayout.inset) : maxWidth;
+        // 양쪽 정렬: 문단의 마지막 줄과 빈 줄은 늘리지 않음 (워드와 동일)
+        let justifyWidth = 0;
+        if (isJustify) {
+          const visible = line.split(EMPH_MARK).join("").split(BOLD_MARK).join("").split(HILITE_MARK).join("").split(QUOTE_MARK).join("").split(ITALIC_MARK).join("");
+          if (!lineObj.isParaEnd && visible.trim().length > 0) {
+            justifyWidth = effectiveMaxWidth;
+          }
+        }
+        // 양쪽 정렬일 때 시작 x는 왼쪽(pad) 기준
+        const lineX = isQuotedLine ? pad + quoteLayout.inset : (isJustify ? pad : x);
+        const lineAlign = isQuotedLine ? "left" : (isJustify ? "left" : align);
+        const r = applyLetterSpacing(line, lineX, y, tracking, lineAlign, baseColor, dialogColor, emphColor, hiliteColor, inQuote, emph, emBold, hilite, quoted, italic, fit.size, justifyWidth);
+        inQuote = r.inQuoteEnd;
+        emph = r.emphEnd;
+        emBold = r.boldEnd;
+        hilite = r.hiliteEnd;
+        quoted = r.quotedEnd;
+        italic = r.italicEnd;
+        y += lineGap;
+      });
+      ctx.restore();
+
+      const footerBaselineY = y - lineGap + footerGap + footerSize;
+      drawFooter(pad, footerBaselineY, footerSize, credit, w);
+    }
+
+    function fitFooterSize(baseSize) {
+      return Math.round(Math.min(34, Math.max(24, baseSize * 0.72)));
+    }
+
+    function drawFooter(pad, y, footerSize, credit, canvasW) {
+      const creditColor = inputs.creditColor.value;
+      const lineColor = inputs.dividerColor.value;
+      if (!credit) return;
+
+      const creditAlign = inputs.creditAlign.value;
+      let x, ctxAlign;
+      if (creditAlign === "center") { x = canvasW / 2; ctxAlign = "center"; }
+      else if (creditAlign === "right") { x = canvasW - pad; ctxAlign = "right"; }
+      else { x = pad; ctxAlign = "left"; }
+
+      if (state.divider) {
+        const gap = state.dividerLineGapMode === "manual"
+          ? Number(inputs.dividerLineGap.value)
+          : Math.max(footerSize * 2.1, 46);
+        const lineY = y - gap;
+        const fullW = canvasW - pad * 2;
+        const lineW = Math.min(fullW, Math.max(120, fullW * 0.32));
+        let lx;
+        if (creditAlign === "center") lx = canvasW / 2 - lineW / 2;
+        else if (creditAlign === "right") lx = canvasW - pad - lineW;
+        else lx = pad;
+        ctx.save();
+        ctx.strokeStyle = lineColor;
+        ctx.lineWidth = Math.max(1.5, footerSize * 0.05);
+        ctx.beginPath();
+        ctx.moveTo(lx, lineY);
+        ctx.lineTo(lx + lineW, lineY);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      ctx.save();
+      ctx.fillStyle = creditColor;
+      ctx.shadowColor = `rgba(0, 0, 0, ${Number(inputs.textShadow.value) / 120})`;
+      ctx.shadowBlur = 8;
+      ctx.font = `700 ${footerSize}px ${fontFamilies.sans}`;
+      ctx.textAlign = ctxAlign;
+      ctx.fillText(credit, x, y);
+      ctx.restore();
+    }
+
+    function draw() {
+      updateQuoteEditorPreviewStyle();
+      setCanvasRatio();
+      if (state.image) {
+        drawImageCover(state.image, inputs.fit.value);
+      } else {
+        ctx.fillStyle = inputs.bgColor.value;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      if (state.image && state.dimMode === "dark") {
+        ctx.fillStyle = `rgba(10, 18, 26, ${Number(inputs.dim.value) / 100})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      drawGradient();
+      drawTextBlock();
+      drawWatermark();
+      drawBorder();
+      updateLabels();
+    }
+
+    function updateLabels() {
+      syncQuoteSourceFromEditor();
+      labels.fontSize.textContent = `${inputs.fontSize.value}px`;
+      labels.lineHeight.textContent = Number(inputs.lineHeight.value).toFixed(2);
+      labels.creditSize.textContent = `${inputs.creditSize.value}px`;
+      labels.dividerGap.textContent = `${inputs.dividerGap.value}px`;
+      labels.dividerLineGap.textContent = `${inputs.dividerLineGap.value}px`;
+      labels.padding.textContent = `${inputs.padding.value}px`;
+      labels.tracking.textContent = `${inputs.tracking.value}px`;
+      labels.dim.textContent = state.dimMode === "dark" ? `${inputs.dim.value}%` : "원본";
+      labels.textShadow.textContent = `${inputs.textShadow.value}%`;
+      labels.gradOpacity.textContent = `${inputs.gradOpacity.value}%`;
+      labels.borderWidth.textContent = `${inputs.borderWidth.value}px`;
+      labels.borderInset.textContent = `${inputs.borderInset.value}px`;
+      labels.watermarkOpacity.textContent = `${inputs.watermarkOpacity.value}%`;
+      const plainCount = inputs.quote.value
+        .replace(/[\u0001-\u0005]/g, "")
+        .replace(/\*\*/g, "")
+        .replace(/==/g, "")
+        .replace(/\/\//g, "")
+        .replace(/!!/g, "")
+        .replace(/>>/g, "")
+        .replace(/\s/g, "");
+      labels.counter.textContent = `${[...plainCount].length.toLocaleString("ko-KR")}자`;
+    }
+
+    function savePng() {
+      const a = document.createElement("a");
+      a.download = `quote-${new Date().toISOString().slice(0, 10)}.png`;
+      a.href = canvas.toDataURL("image/png");
+      a.click();
+    }
+
+    function syncModeButtons(selector, dataKey, value) {
+      document.querySelectorAll(selector).forEach((item) => {
+        item.setAttribute("aria-pressed", String(item.dataset[dataKey] === value));
+      });
+    }
+
+    function setFormatMode(format) {
+      if (format === "emph") {
+        state.emphMode = "on";
+        syncModeButtons("[data-emph-mode]", "emphMode", state.emphMode);
+      }
+      if (format === "hilite") {
+        state.hiliteMode = "on";
+        syncModeButtons("[data-hilite-mode]", "hiliteMode", state.hiliteMode);
+      }
+      if (format === "quote" && !state.dialogBar) {
+        state.dialogBar = true;
+        syncDialogBarColor();
+      }
+    }
+
+    function applySelectionFormat(format) {
+      if (!formatMarkers[format]) return;
+      quoteEditor.focus();
+      const selection = window.getSelection();
+      let range = getQuoteEditorRange();
+      const activeFormatNode = range && selection
+        ? (closestFormatNode(selection.anchorNode, format) === closestFormatNode(selection.focusNode, format)
+          ? closestFormatNode(selection.anchorNode, format)
+          : closestFormatNode(range.commonAncestorContainer, format))
+        : null;
+
+      if (activeFormatNode) {
+        const nextRange = unwrapFormatNode(activeFormatNode);
+        selection.removeAllRanges();
+        selection.addRange(nextRange);
+        quoteEditor.normalize();
+        syncQuoteSourceFromEditor();
+        showFormatColorPanel(format);
+        draw();
+        return;
+      }
+
+      const span = document.createElement("span");
+      span.dataset.format = format;
+
+      if (!range || range.collapsed) {
+        range = document.createRange();
+        range.selectNodeContents(quoteEditor);
+        range.collapse(false);
+        const textNode = document.createTextNode("텍스트");
+        span.appendChild(textNode);
+        range.insertNode(span);
+        range.setStart(textNode, 0);
+        range.setEnd(textNode, textNode.length);
+      } else {
+        span.appendChild(range.extractContents());
+        range.insertNode(span);
+        range.selectNodeContents(span);
+      }
+
+      selection.removeAllRanges();
+      selection.addRange(range);
+      quoteEditor.normalize();
+      syncQuoteSourceFromEditor();
+      setFormatMode(format);
+      showFormatColorPanel(format);
+      draw();
+    }
+
+    document.querySelectorAll("[data-format]").forEach((button) => {
+      button.addEventListener("pointerdown", (event) => {
+        event.preventDefault();
+        applySelectionFormat(button.dataset.format);
+      });
+    });
+
+    document.querySelectorAll("[data-ratio]").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.ratio = button.dataset.ratio;
+        document.querySelectorAll("[data-ratio]").forEach((item) => {
+          item.setAttribute("aria-pressed", String(item === button));
+        });
+        document.querySelector("#customSizeWrap").style.display =
+          state.ratio === "custom" ? "grid" : "none";
+        draw();
+      });
+    });
+
+    document.querySelectorAll("[data-dim-mode]").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.dimMode = button.dataset.dimMode;
+        document.querySelectorAll("[data-dim-mode]").forEach((item) => {
+          item.setAttribute("aria-pressed", String(item === button));
+        });
+        draw();
+      });
+    });
+
+    document.querySelectorAll("[data-bg-color]").forEach((button) => {
+      button.addEventListener("click", () => {
+        inputs.bgColor.value = button.dataset.bgColor;
+        inputs.textColor.value = button.dataset.bgColor === "#ffffff" ? "#26211d" : "#fffdf7";
+        document.querySelectorAll("[data-bg-color]").forEach((item) => {
+          item.setAttribute("aria-pressed", String(item === button));
+        });
+        draw();
+      });
+    });
+
+    document.querySelectorAll("[data-dialog-mode]").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.dialogMode = button.dataset.dialogMode;
+        document.querySelectorAll("[data-dialog-mode]").forEach((item) => {
+          item.setAttribute("aria-pressed", String(item === button));
+        });
+        draw();
+      });
+    });
+
+    document.querySelectorAll("[data-emph-mode]").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.emphMode = button.dataset.emphMode;
+        document.querySelectorAll("[data-emph-mode]").forEach((item) => {
+          item.setAttribute("aria-pressed", String(item === button));
+        });
+        draw();
+      });
+    });
+
+    document.querySelectorAll("[data-hilite-mode]").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.hiliteMode = button.dataset.hiliteMode;
+        document.querySelectorAll("[data-hilite-mode]").forEach((item) => {
+          item.setAttribute("aria-pressed", String(item === button));
+        });
+        draw();
+      });
+    });
+
+    document.querySelector("#indentToggle").addEventListener("click", () => {
+      state.indentOff = !state.indentOff;
+      const btn = document.querySelector("#indentToggle");
+      // 눌림(pressed) = 들여쓰기 적용 중 (indentOff가 false일 때)
+      btn.setAttribute("aria-pressed", String(!state.indentOff));
+      draw();
+    });
+
+    document.querySelector("#bigInputToggle").addEventListener("click", () => {
+      const big = quoteEditor.classList.toggle("big-input");
+      document.querySelector("#bigInputToggle").setAttribute("aria-pressed", String(big));
+    });
+
+    function bindStyleToggle(id, stateKey, exclusiveKey, exclusiveId) {
+      const button = document.querySelector(id);
+      if (!button) return;
+      button.addEventListener("click", () => {
+        state[stateKey] = !state[stateKey];
+        // 얇게/굵게는 동시에 켤 수 없으므로 상대를 끔
+        if (state[stateKey] && exclusiveKey) {
+          state[exclusiveKey] = false;
+          if (exclusiveId) document.querySelector(exclusiveId).setAttribute("aria-pressed", "false");
+        }
+        document.querySelector(id).setAttribute("aria-pressed", String(state[stateKey]));
+        draw();
+      });
+    }
+    bindStyleToggle("#bodyThin", "bodyThin", "bodyBold", "#bodyBold");
+    bindStyleToggle("#bodyBold", "bodyBold", "bodyThin", "#bodyThin");
+    bindStyleToggle("#bodyItalic", "bodyItalic");
+    bindStyleToggle("#dialogThin", "dialogThin", "dialogBold", "#dialogBold");
+    bindStyleToggle("#dialogBold", "dialogBold", "dialogThin", "#dialogThin");
+    bindStyleToggle("#dialogItalic", "dialogItalic");
+    bindStyleToggle("#dialogBar", "dialogBar");
+    const dialogBarButton = document.querySelector("#dialogBar");
+    if (dialogBarButton) {
+      dialogBarButton.addEventListener("click", () => {
+        if (state.dialogBar) syncDialogBarColor();
+        const field = document.querySelector("#dialogBarColorField");
+        if (field) field.style.display = state.dialogBar ? "block" : "none";
+        draw();
+      });
+    }
+
+    // 구분선 토글
+    document.querySelectorAll("[data-divider]").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.divider = button.dataset.divider === "on";
+        document.querySelectorAll("[data-divider]").forEach((item) => {
+          item.setAttribute("aria-pressed", String(item === button));
+        });
+        document.querySelector("#dividerColorField").style.display =
+          state.divider ? "grid" : "none";
+        document.querySelector("#gapModeRow").style.display =
+          state.divider ? "grid" : "none";
+        document.querySelector("#gapWrap").style.display =
+          (state.divider && state.dividerGapMode === "manual") ? "block" : "none";
+        document.querySelector("#lineGapModeRow").style.display =
+          state.divider ? "grid" : "none";
+        document.querySelector("#lineGapWrap").style.display =
+          (state.divider && state.dividerLineGapMode === "manual") ? "block" : "none";
+        draw();
+      });
+    });
+
+    // 본문~구분선 간격 자동/수동 토글
+    document.querySelectorAll("[data-gap-mode]").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.dividerGapMode = button.dataset.gapMode;
+        document.querySelectorAll("[data-gap-mode]").forEach((item) => {
+          item.setAttribute("aria-pressed", String(item === button));
+        });
+        document.querySelector("#gapWrap").style.display =
+          (state.divider && state.dividerGapMode === "manual") ? "block" : "none";
+        draw();
+      });
+    });
+
+    // 구분선~출처 간격 자동/수동 토글
+    document.querySelectorAll("[data-linegap-mode]").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.dividerLineGapMode = button.dataset.linegapMode;
+        document.querySelectorAll("[data-linegap-mode]").forEach((item) => {
+          item.setAttribute("aria-pressed", String(item === button));
+        });
+        document.querySelector("#lineGapWrap").style.display =
+          (state.divider && state.dividerLineGapMode === "manual") ? "block" : "none";
+        draw();
+      });
+    });
+
+    // 출처 크기 자동/수동 토글
+    document.querySelectorAll("[data-credit-size]").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.creditSizeMode = button.dataset.creditSize;
+        document.querySelectorAll("[data-credit-size]").forEach((item) => {
+          item.setAttribute("aria-pressed", String(item === button));
+        });
+        document.querySelector("#creditSizeWrap").style.display =
+          state.creditSizeMode === "manual" ? "block" : "none";
+        draw();
+      });
+    });
+
+    // ===== 프리셋 저장/불러오기 =====
+    // 미리 내장된 프리셋 (밝은 에디토리얼 무드). 항상 목록 맨 위에 표시.
+    const BUILTIN_PRESETS = {
+      "✦ 밝은 종이": {
+        _builtin: true,
+        inputs: {
+          font: "notoSerif", align: "left", lineHeight: "1.85", padding: "110",
+          tracking: "0", bgColor: "#fafafa", textColor: "#3a3a3a",
+          dialogColor: "#7a8a6a", emphColor: "#7a8a6a", hiliteColor: "#ffd6e0",
+          creditAlign: "left", creditSep: "|", gradOpacity: "0", borderWidth: "0",
+          watermark: "", dim: "0", textShadow: "0",
+        },
+        state: {
+          ratio: "4:5", dimMode: "original", indentOff: false, dialogMode: "on",
+          emphMode: "off", hiliteMode: "off", dialogItalic: true, dialogBar: true, divider: true,
+        },
+      },
+      "✦ 밝은 미니멀": {
+        _builtin: true,
+        inputs: {
+          font: "notoSans", align: "left", lineHeight: "1.95", padding: "120",
+          tracking: "0", bgColor: "#ffffff", textColor: "#333333",
+          dialogColor: "#444444", emphColor: "#c0506a", hiliteColor: "#ffd6e0",
+          creditAlign: "left", creditSep: "|", gradOpacity: "0", borderWidth: "0",
+          watermark: "", dim: "0", textShadow: "0",
+        },
+        state: {
+          ratio: "1:1", dimMode: "original", indentOff: false, dialogMode: "off",
+          emphMode: "off", hiliteMode: "on", dialogItalic: false, dialogBar: false, divider: false,
+        },
+      },
+      "✦ 어두운 사진": {
+        _builtin: true,
+        inputs: {
+          font: "notoSans", align: "justify", lineHeight: "2.0", padding: "120",
+          tracking: "0", bgColor: "#1a1a1a", textColor: "#f2f2f2",
+          dialogColor: "#f2f2f2", emphColor: "#ffffff", hiliteColor: "#5b6b8c",
+          creditColor: "#dddddd", dividerColor: "#cccccc",
+          creditAlign: "left", creditSep: "", gradOpacity: "0", borderWidth: "0",
+          watermark: "", dim: "46", textShadow: "30", creditSize: "26",
+        },
+        state: {
+          ratio: "4:5", dimMode: "dark", indentOff: false, dialogMode: "off",
+          emphMode: "on", hiliteMode: "on", bodyBold: false, dialogItalic: false,
+          dialogBar: false, divider: true, creditSizeMode: "manual", dividerGapMode: "auto",
+        },
+      },
+    };
+
+    const PRESET_KEY = "quoteGenPresets";
+    const presetSelect = document.querySelector("#presetSelect");
+
+    // 프리셋에 담을 입력 키 (본문/이미지 제외)
+    const presetInputKeys = [
+      "font", "align", "fontSize", "lineHeight", "padding", "tracking",
+      "fit", "bgColor", "textColor", "dialogColor", "emphColor", "hiliteColor", "creditAlign", "creditSep", "creditSize", "creditColor", "dividerColor", "dialogBarColor", "dividerGap", "dividerLineGap",
+      "gradColor1", "gradColor2", "gradDir", "gradOpacity",
+      "borderWidth", "borderColor", "borderInset",
+      "watermark", "watermarkPos", "watermarkOpacity", "dim",
+      "textShadow", "customW", "customH",
+    ];
+    const presetStateKeys = [
+      "ratio", "dimMode", "indentOff", "dialogMode", "emphMode", "hiliteMode",
+      "bodyBold", "bodyItalic", "bodyThin", "dialogBold", "dialogItalic", "dialogThin", "dialogBar", "divider", "creditSizeMode", "dividerGapMode", "dividerLineGapMode",
+    ];
+
+    function loadUserPresets() {
+      try {
+        return JSON.parse(localStorage.getItem(PRESET_KEY)) || {};
+      } catch (e) {
+        return {};
+      }
+    }
+    // 내장 + 사용자 프리셋을 합쳐 반환 (사용자가 같은 이름 저장 시 사용자 것 우선)
+    function loadPresetStore() {
+      return Object.assign({}, BUILTIN_PRESETS, loadUserPresets());
+    }
+    function savePresetStore(store) {
+      // 내장 프리셋은 저장하지 않음
+      const userOnly = {};
+      Object.keys(store).forEach((k) => { if (!BUILTIN_PRESETS[k]) userOnly[k] = store[k]; });
+      try {
+        localStorage.setItem(PRESET_KEY, JSON.stringify(userOnly));
+      } catch (e) {
+        alert("브라우저 저장에 실패했어요. 시크릿 모드이거나 저장 공간이 가득 찼을 수 있어요.");
+      }
+    }
+    function refreshPresetSelect(selectName) {
+      const store = loadPresetStore();
+      // 내장 먼저, 그다음 사용자 프리셋 (가나다순)
+      const builtinNames = Object.keys(BUILTIN_PRESETS);
+      const userNames = Object.keys(store).filter((n) => !BUILTIN_PRESETS[n]).sort();
+      const names = [...builtinNames, ...userNames];
+      presetSelect.innerHTML = '<option value="">— 선택 —</option>' +
+        names.map((n) => `<option value="${n.replace(/"/g, "&quot;")}">${n}</option>`).join("");
+      if (selectName && store[selectName]) presetSelect.value = selectName;
+    }
+    function capturePreset() {
+      const data = { inputs: {}, state: {} };
+      presetInputKeys.forEach((k) => { if (inputs[k]) data.inputs[k] = inputs[k].value; });
+      presetStateKeys.forEach((k) => { data.state[k] = state[k]; });
+      return data;
+    }
+    function applyPreset(data) {
+      if (!data) return;
+      Object.entries(data.inputs || {}).forEach(([k, v]) => {
+        if (inputs[k]) inputs[k].value = v;
+      });
+      Object.entries(data.state || {}).forEach(([k, v]) => {
+        if (k in state) state[k] = v;
+      });
+      dialogBarColorCustom = Boolean(
+        data.inputs?.dialogBarColor &&
+        data.inputs?.dialogColor &&
+        data.inputs.dialogBarColor !== data.inputs.dialogColor
+      );
+      syncDialogBarColor();
+      syncUiFromState();
+      draw();
+    }
+
+    function setButtonPressed(selector, value) {
+      const button = document.querySelector(selector);
+      if (button) button.setAttribute("aria-pressed", String(value));
+    }
+
+    // state/입력값에 맞춰 토글·칩·버튼들의 표시 상태를 동기화
+    function syncUiFromState() {
+      // 비율
+      document.querySelectorAll("[data-ratio]").forEach((b) => {
+        b.setAttribute("aria-pressed", String(b.dataset.ratio === state.ratio));
+      });
+      document.querySelector("#customSizeWrap").style.display =
+        state.ratio === "custom" ? "grid" : "none";
+      // dim 모드
+      document.querySelectorAll("[data-dim-mode]").forEach((b) => {
+        b.setAttribute("aria-pressed", String(b.dataset.dimMode === state.dimMode));
+      });
+      // 대사 색
+      document.querySelectorAll("[data-dialog-mode]").forEach((b) => {
+        b.setAttribute("aria-pressed", String(b.dataset.dialogMode === state.dialogMode));
+      });
+      // 강조 색
+      document.querySelectorAll("[data-emph-mode]").forEach((b) => {
+        b.setAttribute("aria-pressed", String(b.dataset.emphMode === state.emphMode));
+      });
+      // 형광펜
+      document.querySelectorAll("[data-hilite-mode]").forEach((b) => {
+        b.setAttribute("aria-pressed", String(b.dataset.hiliteMode === state.hiliteMode));
+      });
+      // 구분선
+      document.querySelectorAll("[data-divider]").forEach((b) => {
+        b.setAttribute("aria-pressed", String((b.dataset.divider === "on") === state.divider));
+      });
+      document.querySelector("#dividerColorField").style.display = state.divider ? "grid" : "none";
+      document.querySelector("#gapModeRow").style.display = state.divider ? "grid" : "none";
+      document.querySelectorAll("[data-gap-mode]").forEach((b) => {
+        b.setAttribute("aria-pressed", String(b.dataset.gapMode === state.dividerGapMode));
+      });
+      document.querySelector("#gapWrap").style.display =
+        (state.divider && state.dividerGapMode === "manual") ? "block" : "none";
+      document.querySelector("#lineGapModeRow").style.display = state.divider ? "grid" : "none";
+      document.querySelectorAll("[data-linegap-mode]").forEach((b) => {
+        b.setAttribute("aria-pressed", String(b.dataset.linegapMode === state.dividerLineGapMode));
+      });
+      document.querySelector("#lineGapWrap").style.display =
+        (state.divider && state.dividerLineGapMode === "manual") ? "block" : "none";
+      // 배경색 빠른 선택 칩 (현재 bgColor와 일치하는 것만 눌림)
+      document.querySelectorAll("[data-bg-color]").forEach((b) => {
+        b.setAttribute("aria-pressed", String(b.dataset.bgColor.toLowerCase() === (inputs.bgColor.value || "").toLowerCase()));
+      });
+      // 들여쓰기 (눌림 = 적용 중)
+      const indentBtn = document.querySelector("#indentToggle");
+      indentBtn.setAttribute("aria-pressed", String(!state.indentOff));
+      // 단순 토글들
+      setButtonPressed("#bodyBold", state.bodyBold);
+      setButtonPressed("#bodyItalic", state.bodyItalic);
+      setButtonPressed("#bodyThin", state.bodyThin);
+      setButtonPressed("#dialogBold", state.dialogBold);
+      setButtonPressed("#dialogItalic", state.dialogItalic);
+      setButtonPressed("#dialogBar", state.dialogBar);
+      const dialogBarColorField = document.querySelector("#dialogBarColorField");
+      if (dialogBarColorField) dialogBarColorField.style.display = state.dialogBar ? "block" : "none";
+      // 출처 크기 자동/수동
+      document.querySelectorAll("[data-credit-size]").forEach((b) => {
+        b.setAttribute("aria-pressed", String(b.dataset.creditSize === state.creditSizeMode));
+      });
+      document.querySelector("#creditSizeWrap").style.display =
+        state.creditSizeMode === "manual" ? "block" : "none";
+      setButtonPressed("#dialogThin", state.dialogThin);
+    }
+
+    document.querySelector("#presetSaveBtn").addEventListener("click", () => {
+      const name = (document.querySelector("#presetName").value || "").trim();
+      if (!name) { alert("프리셋 이름을 입력해 주세요."); return; }
+      if (BUILTIN_PRESETS[name]) { alert("그 이름은 기본 프리셋이 사용 중이에요. 다른 이름을 써주세요."); return; }
+      const store = loadUserPresets();
+      if (store[name] && !confirm(`"${name}" 프리셋을 덮어쓸까요?`)) return;
+      store[name] = capturePreset();
+      savePresetStore(Object.assign({}, BUILTIN_PRESETS, store));
+      refreshPresetSelect(name);
+      document.querySelector("#presetName").value = "";
+    });
+
+    document.querySelector("#presetLoadBtn").addEventListener("click", () => {
+      const name = presetSelect.value;
+      if (!name) { alert("불러올 프리셋을 선택해 주세요."); return; }
+      const store = loadPresetStore();
+      applyPreset(store[name]);
+    });
+
+    document.querySelector("#presetDeleteBtn").addEventListener("click", () => {
+      const name = presetSelect.value;
+      if (!name) { alert("삭제할 프리셋을 선택해 주세요."); return; }
+      if (BUILTIN_PRESETS[name]) { alert("기본 제공 프리셋은 삭제할 수 없어요."); return; }
+      if (!confirm(`"${name}" 프리셋을 삭제할까요?`)) return;
+      const store = loadUserPresets();
+      delete store[name];
+      savePresetStore(Object.assign({}, BUILTIN_PRESETS, store));
+      refreshPresetSelect();
+    });
+
+    refreshPresetSelect();
+
+    quoteEditor.addEventListener("input", () => {
+      syncQuoteSourceFromEditor();
+      draw();
+    });
+
+    quoteEditor.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      insertPlainTextAtSelection("\n");
+      syncQuoteSourceFromEditor();
+      draw();
+    });
+
+    quoteEditor.addEventListener("paste", (event) => {
+      event.preventDefault();
+      const text = event.clipboardData?.getData("text/plain") || "";
+      insertPlainTextAtSelection(text);
+      syncQuoteSourceFromEditor();
+      draw();
+    });
+
+    Object.values(inputs).forEach((input) => {
+      input.addEventListener("input", () => {
+        if (input === inputs.dialogBarColor) {
+          dialogBarColorCustom = true;
+        } else if (input === inputs.dialogColor) {
+          syncDialogBarColor();
+        }
+        draw();
+      });
+      input.addEventListener("change", () => {
+        if (input === inputs.dialogBarColor) {
+          dialogBarColorCustom = true;
+        } else if (input === inputs.dialogColor) {
+          syncDialogBarColor();
+        }
+        draw();
+      });
+    });
+
+    inputs.imageInput.addEventListener("change", (event) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const image = new Image();
+        image.onload = () => {
+          state.image = image;
+          draw();
+        };
+        image.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    document.querySelector("#clearImageBtn").addEventListener("click", () => {
+      inputs.imageInput.value = "";
+      state.image = null;
+      draw();
+    });
+    document.querySelector("#saveBtn").addEventListener("click", savePng);
+
+    document.querySelectorAll(".toolbar .panel > h2").forEach((h2) => {
+      h2.classList.add("collapsible");
+      h2.parentElement.classList.add("collapsed");
+      h2.addEventListener("click", () => {
+        h2.parentElement.classList.toggle("collapsed");
+      });
+    });
+
+    draw();
+  </script>
+</body>
+</html>
