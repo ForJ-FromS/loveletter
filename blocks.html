@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>블록 로그 메이커</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@300;400;500;700&family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      color-scheme: light;
+      --bg: #131317;
+      --panel: #f6f5f1;
+      --panel-soft: #ebeae4;
+      --ink: #1e1e23;
+      --muted: #7b7982;
+      --line: #d8d6d0;
+      --line-soft: #e9e7e1;
+      --accent: #3e4d80;
+      --accent-dark: #2d3a66;
+      --radius: 6px;
+      --serif: "Noto Serif KR", "Gowun Batang", serif;
+    }
+    body {
+      margin: 0;
+      font-family: "Noto Sans KR", ui-sans-serif, system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.6;
+    }
+    .wrap {
+      display: grid;
+      grid-template-columns: 390px 1fr;
+      min-height: 100vh;
+    }
+    .toolbar {
+      background: var(--panel);
+      border-right: 1px solid rgba(0,0,0,0.35);
+      padding: 26px 24px 40px;
+      overflow-y: auto;
+      max-height: 100vh;
+      position: sticky;
+      top: 0;
+    }
+    .preview-wrap {
+      padding: 34px 38px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.03), transparent 26%),
+        radial-gradient(900px 520px at 50% 0%, rgba(62,77,128,0.16), transparent 60%);
+    }
+    .kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.26em;
+      margin: 0 0 12px;
+    }
+    .kicker::before {
+      content: "";
+      width: 22px;
+      height: 1px;
+      background: var(--accent);
+    }
+    h1 {
+      font-family: var(--serif);
+      font-size: 26px;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.01em;
+      margin: 0 0 8px;
+      color: var(--ink);
+    }
+    .sub {
+      font-size: 12.5px;
+      color: var(--muted);
+      margin: 0 0 6px;
+      line-height: 1.65;
+    }
+    a.back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--muted);
+      text-decoration: none;
+      margin-bottom: 16px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    a.back:hover { color: var(--accent); }
+    .section {
+      border-top: 1px solid var(--line);
+      padding-top: 20px;
+      margin-top: 22px;
+    }
+    .section-title {
+      font-size: 10.5px;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ink);
+      margin: 0 0 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--line-soft);
+    }
+    .section-title {
+      cursor: pointer;
+      user-select: none;
+    }
+    .section-title .arrow {
+      font-size: 10px;
+      opacity: 0.55;
+      transition: transform 0.18s ease;
+    }
+    .section.collapsed .section-title .arrow { transform: rotate(-90deg); }
+    .section.collapsed > *:not(.section-title) { display: none !important; }
+
+    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 9px; }
+    .color-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 2px; }
+    .color-grid label { font-size: 10.5px; text-align: center; margin-bottom: 4px; }
+    .color-grid input[type="color"] { height: 32px; }
+    .bgimg-row { display: flex; gap: 8px; }
+    .bgimg-row input[type="file"] { flex: 1; min-width: 0; font-size: 12px; }
+    .bgimg-row .btn { flex-shrink: 0; padding: 7px 12px; }
+    .add-row {
+      display: flex;
+      gap: 7px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+    .btn {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      border-radius: var(--radius);
+      padding: 9px 13px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+    }
+    .btn:hover { border-color: var(--accent); color: var(--accent); }
+    .btn.primary {
+      background: var(--ink);
+      color: #f6f5f1;
+      border-color: var(--ink);
+      width: 100%;
+      padding: 13px;
+      font-size: 13.5px;
+      letter-spacing: 0.04em;
+    }
+    .btn.primary:hover { background: var(--accent-dark); border-color: var(--accent-dark); color: #fff; }
+    .btn.add { flex: 1; min-width: 74px; }
+    .field { margin-bottom: 13px; }
+    label {
+      display: block;
+      font-size: 11.5px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+    input[type="text"], input[type="number"], textarea, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 9px 11px;
+      font-size: 13px;
+      font-family: inherit;
+      background: #fff;
+      color: var(--ink);
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    textarea { resize: vertical; min-height: 74px; line-height: 1.65; }
+    input[type="color"] {
+      width: 100%; height: 36px; border: 1px solid var(--line);
+      border-radius: var(--radius); background: #fff; cursor: pointer; padding: 3px;
+    }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .range-row { display: flex; align-items: center; gap: 10px; }
+    input[type="range"] { flex: 1; accent-color: var(--accent); }
+    .val { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+    .block-list { margin-top: 2px; }
+    .block-item {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px;
+      margin-bottom: 9px;
+      background: #fff;
+    }
+    .block-head {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 9px;
+    }
+    .block-type {
+      font-size: 10.5px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      flex: 1;
+    }
+    .icon-btn {
+      border: 1px solid var(--line-soft);
+      background: transparent;
+      border-radius: 4px;
+      width: 26px; height: 26px;
+      cursor: pointer;
+      font-size: 12px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted);
+      padding: 0;
+      transition: color 0.12s, border-color 0.12s;
+    }
+    .icon-btn:hover { color: var(--ink); border-color: var(--line); }
+    .icon-btn.danger:hover { color: #a5372c; border-color: #d8b0aa; }
+    .empty-hint {
+      font-size: 12.5px;
+      color: var(--muted);
+      text-align: center;
+      padding: 22px 0;
+      line-height: 1.8;
+    }
+    .stage-note {
+      font-size: 11.5px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .fmt-row {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+    .fmt-btn {
+      border: 1px solid var(--line);
+      background: var(--panel-soft);
+      color: var(--ink);
+      border-radius: 4px;
+      padding: 4px 9px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: border-color 0.12s, color 0.12s;
+    }
+    .fmt-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .img-opts {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 6px 10px;
+      align-items: center;
+      margin-top: 9px;
+    }
+    .img-opts .img-opt-label {
+      grid-column: 1 / -1;
+      margin: 0;
+      display: flex;
+      justify-content: space-between;
+    }
+    .img-opts select { width: 90px; padding: 6px 8px; font-size: 12px; }
+
+    #stage .b-credit {
+      margin-top: 8px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    #stage .b-credit-line {
+      width: 34%;
+      max-width: 180px;
+      height: 1px;
+    }
+
+    /* ===== 미리보기: 조판 책상 + 재단선 ===== */
+    .proof {
+      position: relative;
+      padding: 30px;
+      width: fit-content;
+      max-width: 100%;
+    }
+    .proof::before {
+      content: "";
+      position: absolute;
+      inset: 8px;
+      pointer-events: none;
+      background:
+        linear-gradient(rgba(255,255,255,0.34), rgba(255,255,255,0.34)) 0 0 / 16px 1px,
+        linear-gradient(rgba(255,255,255,0.34), rgba(255,255,255,0.34)) 0 0 / 1px 16px,
+        linear-gradient(rgba(255,255,255,0.34), rgba(255,255,255,0.34)) 100% 0 / 16px 1px,
+        linear-gradient(rgba(255,255,255,0.34), rgba(255,255,255,0.34)) 100% 0 / 1px 16px,
+        linear-gradient(rgba(255,255,255,0.34), rgba(255,255,255,0.34)) 0 100% / 16px 1px,
+        linear-gradient(rgba(255,255,255,0.34), rgba(255,255,255,0.34)) 0 100% / 1px 16px,
+        linear-gradient(rgba(255,255,255,0.34), rgba(255,255,255,0.34)) 100% 100% / 16px 1px,
+        linear-gradient(rgba(255,255,255,0.34), rgba(255,255,255,0.34)) 100% 100% / 1px 16px;
+      background-repeat: no-repeat;
+    }
+
+    #stage {
+      width: 600px;
+      max-width: 100%;
+      background: #ffffff;
+      padding: 60px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.14),
+        0 34px 90px -36px rgba(0,0,0,0.78);
+      border-radius: 2px;
+    }
+    #stage .b-text {
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 17px;
+      line-height: 1.9;
+    }
+    #stage .b-text .rt-dialog { color: var(--rt-dialog); }
+    #stage .b-text .rt-emph { color: var(--rt-emph); }
+    #stage .b-text .rt-hilite { background: var(--rt-hilite); padding: 0 2px; border-radius: 2px; }
+    #stage .b-text .rt-quote {
+      display: inline-block;
+      border-left: 3px solid var(--rt-quotebar);
+      padding-left: 12px;
+    }
+    #stage .b-title {
+      font-family: var(--serif);
+      font-size: 1.75em;
+      font-weight: 800;
+      line-height: 1.35;
+      word-break: keep-all;
+      letter-spacing: -0.01em;
+    }
+    #stage .b-subtitle {
+      font-size: 1.02em;
+      font-weight: 600;
+      opacity: 0.6;
+      line-height: 1.5;
+      word-break: keep-all;
+    }
+    #stage .b-image img {
+      display: block;
+      max-width: 100%;
+      border-radius: 4px;
+    }
+    #stage .b-empty {
+      color: #c2c0ba;
+      font-style: italic;
+      font-size: 13.5px;
+    }
+    @media (max-width: 940px) {
+      .wrap { grid-template-columns: 1fr; }
+      .toolbar { position: static; max-height: none; }
+      .preview-wrap { padding: 26px 16px; }
+      #stage { width: 100%; padding: 40px 28px; }
+      .proof { padding: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="toolbar">
+      <a class="back" href="index.html">← 발췌 이미지 에디터로</a>
+      <span class="kicker">BLOCK STUDIO</span>
+      <h1>블록 로그 메이커</h1>
+      <p class="sub">본문·이미지·HTML 블록을 쌓아 하나의 이미지로 저장해요.</p>
+
+      <div class="add-row">
+        <button class="btn add" data-add="title">＋ 제목</button>
+        <button class="btn add" data-add="subtitle">＋ 소제목</button>
+        <button class="btn add" data-add="text">＋ 본문</button>
+        <button class="btn add" data-add="image">＋ 이미지</button>
+        <button class="btn add" data-add="html">＋ HTML</button>
+      </div>
+
+      <div class="section">
+        <p class="section-title">블록</p>
+        <div class="block-list" id="blockList"></div>
+      </div>
+
+      <div class="section">
+        <p class="section-title">본문 스타일</p>
+        <div class="row3">
+          <div class="field">
+            <label for="textSize">크기</label>
+            <input id="textSize" type="number" min="12" max="40" value="17">
+          </div>
+          <div class="field">
+            <label for="textLh">줄간격</label>
+            <input id="textLh" type="number" min="1.2" max="2.6" step="0.05" value="1.9">
+          </div>
+          <div class="field">
+            <label for="textAlign">정렬</label>
+            <select id="textAlign">
+              <option value="left">왼쪽</option>
+              <option value="center">가운데</option>
+              <option value="justify">양쪽</option>
+            </select>
+          </div>
+        </div>
+        <div class="color-grid">
+          <div class="field"><label for="dialogColor">대사</label><input id="dialogColor" type="color" value="#c9861f"></div>
+          <div class="field"><label for="emphColor">강조</label><input id="emphColor" type="color" value="#3d7edb"></div>
+          <div class="field"><label for="hiliteColor">형광펜</label><input id="hiliteColor" type="color" value="#ffe14d"></div>
+          <div class="field"><label for="quoteBarColor">인용 바</label><input id="quoteBarColor" type="color" value="#b08948"></div>
+        </div>
+        <p class="stage-note">따옴표 안은 대사 색으로, 나머지 서식은 본문 블록에서 드래그 후 버튼으로 넣고 빼요.</p>
+      </div>
+
+      <div class="section">
+        <p class="section-title">출처</p>
+        <div class="row2">
+          <div class="field">
+            <label for="creditChar">캐릭터명</label>
+            <input id="creditChar" type="text" placeholder="비우면 표시 안 됨">
+          </div>
+          <div class="field">
+            <label for="creditName">제작자</label>
+            <input id="creditName" type="text" placeholder="비우면 표시 안 됨">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="creditSep">이름 구분 기호</label>
+            <select id="creditSep">
+              <option value="|">|  (막대)</option>
+              <option value="·">·  (가운뎃점)</option>
+              <option value="/">/  (슬래시)</option>
+              <option value="-">-  (하이픈)</option>
+              <option value="—">—  (대시)</option>
+              <option value="•">•  (불릿)</option>
+              <option value="×">×  (곱표)</option>
+              <option value=" ">(공백)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="creditAlign">출처 정렬</label>
+            <select id="creditAlign">
+              <option value="left">왼쪽</option>
+              <option value="center">가운데</option>
+              <option value="right">오른쪽</option>
+            </select>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="creditColor">출처 글자 색</label>
+            <input id="creditColor" type="color" value="#8a8a8a">
+          </div>
+          <div class="field">
+            <label for="creditSize">출처 크기(px)</label>
+            <input id="creditSize" type="number" min="10" max="32" value="14">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="useDividerLine">구분선</label>
+            <select id="useDividerLine"><option value="off">없음</option><option value="on">있음</option></select>
+          </div>
+          <div class="field">
+            <label for="dividerColor">구분선 색</label>
+            <input id="dividerColor" type="color" value="#c8c8c8">
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <p class="section-title">전체 스타일</p>
+        <div class="field">
+          <label for="stageBgImg">배경 이미지</label>
+          <div class="bgimg-row">
+            <input id="stageBgImg" type="file" accept="image/*">
+            <button class="btn" id="stageBgClear" type="button">삭제</button>
+          </div>
+        </div>
+        <div class="field" id="bgDimWrap" style="display:none;">
+          <label>배경 어둡게 <span class="val" id="bgDimVal">40%</span></label>
+          <div class="range-row">
+            <input id="stageBgDim" type="range" min="0" max="80" value="40">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="stageBg">배경색</label>
+            <input id="stageBg" type="color" value="#ffffff">
+          </div>
+          <div class="field">
+            <label for="stageColor">기본 글자색</label>
+            <input id="stageColor" type="color" value="#2e2a20">
+          </div>
+        </div>
+        <div class="field">
+          <label for="stageFont">폰트</label>
+          <select id="stageFont">
+            <option value="'Noto Sans KR', sans-serif">고딕 (Noto Sans)</option>
+            <option value="'Noto Serif KR', serif">명조 (Noto Serif)</option>
+            <option value="'Gowun Batang', serif">고운바탕</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>바깥 여백 <span class="val" id="padVal">60px</span></label>
+          <div class="range-row">
+            <input id="stagePad" type="range" min="0" max="120" value="60">
+          </div>
+        </div>
+        <div class="field">
+          <label>블록 간격 <span class="val" id="gapVal">22px</span></label>
+          <div class="range-row">
+            <input id="stageGap" type="range" min="0" max="60" value="22">
+          </div>
+        </div>
+        <div class="field">
+          <label>너비 <span class="val" id="widthVal">600px</span></label>
+          <div class="range-row">
+            <input id="stageWidth" type="range" min="360" max="1080" value="600">
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <button class="btn primary" id="saveBtn">이미지로 저장 (PNG)</button>
+        <p class="stage-note" style="margin-top:10px;">HTML 블록은 스타일이 코드 안에 포함돼 있어야 그대로 나와요.</p>
+      </div>
+    </section>
+
+    <section class="preview-wrap">
+      <div class="proof">
+        <div id="stage"></div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // ===== 상태 =====
+    let blocks = [];
+    let idSeq = 1;
+    let stageBgImage = null; // 배경 이미지 dataURL
+
+    const stage = document.getElementById("stage");
+    const blockList = document.getElementById("blockList");
+
+    const stageInputs = {
+      bg: document.getElementById("stageBg"),
+      color: document.getElementById("stageColor"),
+      font: document.getElementById("stageFont"),
+      pad: document.getElementById("stagePad"),
+      gap: document.getElementById("stageGap"),
+      width: document.getElementById("stageWidth"),
+    };
+
+    const textInputs = {
+      size: document.getElementById("textSize"),
+      lh: document.getElementById("textLh"),
+      align: document.getElementById("textAlign"),
+      dialogColor: document.getElementById("dialogColor"),
+      emphColor: document.getElementById("emphColor"),
+      hiliteColor: document.getElementById("hiliteColor"),
+      quoteBarColor: document.getElementById("quoteBarColor"),
+    };
+
+    const creditInputs = {
+      char: document.getElementById("creditChar"),
+      name: document.getElementById("creditName"),
+      sep: document.getElementById("creditSep"),
+      align: document.getElementById("creditAlign"),
+      color: document.getElementById("creditColor"),
+      size: document.getElementById("creditSize"),
+      useLine: document.getElementById("useDividerLine"),
+      lineColor: document.getElementById("dividerColor"),
+    };
+
+    function escapeHtml(s) {
+      return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    function hexToRgba(hex, alpha) {
+      const m = /^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(hex);
+      if (!m) return hex;
+      return `rgba(${parseInt(m[1],16)}, ${parseInt(m[2],16)}, ${parseInt(m[3],16)}, ${alpha})`;
+    }
+
+    // 발췌기와 같은 마커를 HTML로 변환: **강조** ==굵게== //기울임// !!형광펜!! >>인용>> "대사"
+    function renderRichText(raw) {
+      let s = escapeHtml(raw);
+      // 인용 바: >>...>> (여러 줄 허용) → 왼쪽 세로 바 블록
+      s = s.replace(/&gt;&gt;([\s\S]+?)&gt;&gt;/g, '<span class="rt-quote">$1</span>');
+      // 형광펜: !!...!!
+      s = s.replace(/!!([^\n!]+?)!!/g, '<span class="rt-hilite">$1</span>');
+      // 강조 색: **...**
+      s = s.replace(/\*\*([^\n*]+?)\*\*/g, '<span class="rt-emph">$1</span>');
+      // 굵게: ==...== 
+      s = s.replace(/==([^\n=]+?)==/g, '<strong>$1</strong>');
+      // 기울임: //...//
+      s = s.replace(/\/\/([^\n/]+?)\/\//g, '<em>$1</em>');
+      // 대사 색: "..." (escapeHtml로 &quot;가 됨)
+      s = s.replace(/&quot;([^\n]*?)&quot;/g, '<span class="rt-dialog">&quot;$1&quot;</span>');
+      return s;
+    }
+
+    function addBlock(type) {
+      const block = { id: idSeq++, type };
+      if (type === "text" || type === "title" || type === "subtitle") block.text = "";
+      if (type === "image") block.src = null;
+      if (type === "html") block.html = "";
+      blocks.push(block);
+      renderEditor();
+      renderStage();
+    }
+
+    function removeBlock(id) {
+      blocks = blocks.filter((b) => b.id !== id);
+      renderEditor();
+      renderStage();
+    }
+
+    function moveBlock(id, dir) {
+      const i = blocks.findIndex((b) => b.id === id);
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= blocks.length) return;
+      [blocks[i], blocks[j]] = [blocks[j], blocks[i]];
+      renderEditor();
+      renderStage();
+    }
+
+    const typeLabel = { text: "본문", image: "이미지", html: "HTML", title: "제목", subtitle: "소제목" };
+
+    // ===== 편집 패널 렌더 =====
+    function renderEditor() {
+      if (blocks.length === 0) {
+        blockList.innerHTML = '<p class="empty-hint">위의 ＋ 버튼으로 블록을 추가하세요.<br>본문 · 이미지 · HTML을 위아래로 쌓을 수 있어요.</p>';
+        return;
+      }
+      blockList.innerHTML = "";
+      blocks.forEach((block, index) => {
+        const item = document.createElement("div");
+        item.className = "block-item";
+
+        const head = document.createElement("div");
+        head.className = "block-head";
+        head.innerHTML = `<span class="block-type">${typeLabel[block.type]} #${index + 1}</span>`;
+
+        const upBtn = document.createElement("button");
+        upBtn.className = "icon-btn"; upBtn.textContent = "↑"; upBtn.title = "위로";
+        upBtn.onclick = () => moveBlock(block.id, -1);
+        const downBtn = document.createElement("button");
+        downBtn.className = "icon-btn"; downBtn.textContent = "↓"; downBtn.title = "아래로";
+        downBtn.onclick = () => moveBlock(block.id, 1);
+        const delBtn = document.createElement("button");
+        delBtn.className = "icon-btn danger"; delBtn.textContent = "✕"; delBtn.title = "삭제";
+        delBtn.onclick = () => removeBlock(block.id);
+        head.append(upBtn, downBtn, delBtn);
+        item.appendChild(head);
+
+        if (block.type === "text") {
+          const ta = document.createElement("textarea");
+          ta.placeholder = "본문 내용을 입력하세요. 드래그한 뒤 아래 버튼으로 서식을 적용해요.";
+          ta.value = block.text;
+          ta.oninput = () => { block.text = ta.value; renderStage(); };
+          item.appendChild(ta);
+          // 드래그 서식 버튼: 선택 구간을 마커로 감싸기
+          const fmtRow = document.createElement("div");
+          fmtRow.className = "fmt-row";
+          const fmts = [
+            ["강조", "**", "**"],
+            ["B 굵게", "==", "=="],
+            ["I 기울임", "//", "//"],
+            ["형광펜", "!!", "!!"],
+            ["▏인용", ">>", ">>"],
+          ];
+          fmts.forEach(([labelTxt, open, close]) => {
+            const b = document.createElement("button");
+            b.type = "button";
+            b.className = "fmt-btn";
+            b.textContent = labelTxt;
+            b.onclick = () => {
+              const s = ta.selectionStart, e = ta.selectionEnd;
+              if (s === e) { ta.focus(); return; }
+              const v = ta.value;
+              const ol = open.length, cl = close.length;
+              const selected = v.slice(s, e);
+              // 이미 감싸져 있으면 제거 (토글)
+              if (v.slice(s - ol, s) === open && v.slice(e, e + cl) === close) {
+                // 선택 바깥 양옆에 마커
+                ta.value = v.slice(0, s - ol) + selected + v.slice(e + cl);
+                block.text = ta.value;
+                ta.focus();
+                ta.setSelectionRange(s - ol, e - ol);
+              } else if (selected.startsWith(open) && selected.endsWith(close) && selected.length >= ol + cl) {
+                // 선택 안쪽에 마커 포함
+                const inner = selected.slice(ol, selected.length - cl);
+                ta.value = v.slice(0, s) + inner + v.slice(e);
+                block.text = ta.value;
+                ta.focus();
+                ta.setSelectionRange(s, s + inner.length);
+              } else {
+                // 없으면 감싸기
+                ta.value = v.slice(0, s) + open + selected + close + v.slice(e);
+                block.text = ta.value;
+                ta.focus();
+                ta.setSelectionRange(s, e + ol + cl);
+              }
+              renderStage();
+            };
+            fmtRow.appendChild(b);
+          });
+          item.appendChild(fmtRow);
+        } else if (block.type === "title" || block.type === "subtitle") {
+          const inp = document.createElement("input");
+          inp.type = "text";
+          inp.placeholder = block.type === "title" ? "제목을 입력하세요" : "소제목을 입력하세요";
+          inp.value = block.text;
+          inp.oninput = () => { block.text = inp.value; renderStage(); };
+          item.appendChild(inp);
+        } else if (block.type === "image") {
+          const file = document.createElement("input");
+          file.type = "file"; file.accept = "image/*";
+          file.onchange = (e) => {
+            const f = e.target.files[0];
+            if (!f) return;
+            const reader = new FileReader();
+            reader.onload = () => { block.src = reader.result; renderStage(); };
+            reader.readAsDataURL(f);
+          };
+          item.appendChild(file);
+          // 크기(%) + 정렬
+          if (block.width == null) block.width = 100;
+          if (!block.align) block.align = "center";
+          const opt = document.createElement("div");
+          opt.className = "img-opts";
+          opt.innerHTML = `
+            <label class="img-opt-label">크기 <span class="val">${block.width}%</span></label>
+            <input type="range" min="20" max="100" value="${block.width}" class="img-w">
+            <select class="img-align">
+              <option value="flex-start"${block.align==="flex-start"?" selected":""}>왼쪽</option>
+              <option value="center"${block.align==="center"?" selected":""}>가운데</option>
+              <option value="flex-end"${block.align==="flex-end"?" selected":""}>오른쪽</option>
+            </select>`;
+          const wRange = opt.querySelector(".img-w");
+          const wVal = opt.querySelector(".val");
+          wRange.oninput = () => { block.width = Number(wRange.value); wVal.textContent = block.width + "%"; renderStage(); };
+          opt.querySelector(".img-align").onchange = (e) => { block.align = e.target.value; renderStage(); };
+          item.appendChild(opt);
+        } else if (block.type === "html") {
+          const ta = document.createElement("textarea");
+          ta.placeholder = "채팅앱이 준 HTML을 그대로 붙여넣으세요.";
+          ta.value = block.html;
+          ta.style.fontFamily = "monospace";
+          ta.style.fontSize = "12px";
+          ta.oninput = () => { block.html = ta.value; renderStage(); };
+          item.appendChild(ta);
+        }
+
+        blockList.appendChild(item);
+      });
+    }
+
+    // ===== 미리보기(스테이지) 렌더 =====
+    function renderStage() {
+      stage.style.background = stageInputs.bg.value;
+      if (stageBgImage) {
+        stage.style.backgroundImage = `url(${stageBgImage})`;
+        stage.style.backgroundSize = "cover";
+        stage.style.backgroundPosition = "center";
+      } else {
+        stage.style.backgroundImage = "none";
+      }
+      stage.style.color = stageInputs.color.value;
+      stage.style.fontFamily = stageInputs.font.value;
+      stage.style.padding = stageInputs.pad.value + "px";
+      stage.style.gap = stageInputs.gap.value + "px";
+      stage.style.width = stageInputs.width.value + "px";
+      stage.style.position = "relative";
+      stage.style.setProperty("--rt-dialog", textInputs.dialogColor.value);
+      stage.style.setProperty("--rt-emph", textInputs.emphColor.value);
+      stage.style.setProperty("--rt-hilite", hexToRgba(textInputs.hiliteColor.value, 0.55));
+      stage.style.setProperty("--rt-quotebar", textInputs.quoteBarColor.value);
+
+      stage.innerHTML = "";
+      // 배경 이미지 어둡게 오버레이 (콘텐츠 뒤)
+      if (stageBgImage) {
+        const dim = Number(document.getElementById("stageBgDim").value) / 100;
+        if (dim > 0) {
+          const ov = document.createElement("div");
+          ov.style.cssText = `position:absolute;inset:0;background:rgba(0,0,0,${dim});pointer-events:none;`;
+          stage.appendChild(ov);
+        }
+      }
+      if (blocks.length === 0) {
+        const hint = document.createElement("div");
+        hint.className = "b-empty";
+        hint.textContent = "블록을 추가하면 여기에 미리보기가 나타나요.";
+        stage.appendChild(hint);
+        return;
+      }
+
+      blocks.forEach((block) => {
+        const el = document.createElement("div");
+        el.style.position = "relative";
+        if (block.type === "text") {
+          el.className = "b-text";
+          if (block.text) {
+            el.innerHTML = renderRichText(block.text);
+            el.style.fontSize = textInputs.size.value + "px";
+            el.style.lineHeight = textInputs.lh.value;
+            el.style.textAlign = textInputs.align.value;
+          } else { el.className = "b-empty"; el.textContent = "(빈 본문 블록)"; }
+        } else if (block.type === "title") {
+          el.className = "b-title";
+          if (block.text) { el.textContent = block.text; }
+          else { el.className = "b-empty"; el.textContent = "(빈 제목 블록)"; }
+        } else if (block.type === "subtitle") {
+          el.className = "b-subtitle";
+          if (block.text) { el.textContent = block.text; }
+          else { el.className = "b-empty"; el.textContent = "(빈 소제목 블록)"; }
+        } else if (block.type === "image") {
+          el.className = "b-image";
+          if (block.src) {
+            const img = document.createElement("img");
+            img.src = block.src;
+            img.style.width = (block.width || 100) + "%";
+            el.style.display = "flex";
+            el.style.justifyContent = block.align || "center";
+            el.appendChild(img);
+          } else {
+            el.className = "b-empty";
+            el.textContent = "(이미지 없음 — 파일을 선택하세요)";
+          }
+        } else if (block.type === "html") {
+          el.className = "b-html";
+          if (block.html.trim()) {
+            el.innerHTML = block.html;
+          } else {
+            el.className = "b-empty";
+            el.textContent = "(빈 HTML 블록)";
+          }
+        }
+        stage.appendChild(el);
+      });
+
+      // 출처 푸터 (캐릭터명 · 제작자 + 구분선)
+      const charV = creditInputs.char.value.trim();
+      const nameV = creditInputs.name.value.trim();
+      if (charV || nameV) {
+        const sepChar = creditInputs.sep.value;
+        const sep = sepChar === " " ? "   " : `  ${sepChar}  `;
+        const credit = [charV, nameV].filter(Boolean).join(sep);
+        const footer = document.createElement("div");
+        footer.className = "b-credit";
+        footer.style.position = "relative";
+        footer.style.textAlign = creditInputs.align.value;
+        footer.style.color = creditInputs.color.value;
+        footer.style.fontSize = creditInputs.size.value + "px";
+        if (creditInputs.useLine.value === "on") {
+          const line = document.createElement("div");
+          line.className = "b-credit-line";
+          line.style.background = creditInputs.lineColor.value;
+          if (creditInputs.align.value === "center") line.style.margin = "0 auto 14px";
+          else if (creditInputs.align.value === "right") line.style.margin = "0 0 14px auto";
+          else line.style.margin = "0 auto 14px 0";
+          footer.appendChild(line);
+        }
+        const txt = document.createElement("div");
+        txt.textContent = credit;
+        footer.appendChild(txt);
+        stage.appendChild(footer);
+      }
+    }
+
+    // ===== 라벨 & 스타일 입력 =====
+    document.getElementById("stagePad").addEventListener("input", (e) => {
+      document.getElementById("padVal").textContent = e.target.value + "px";
+      renderStage();
+    });
+    document.getElementById("stageGap").addEventListener("input", (e) => {
+      document.getElementById("gapVal").textContent = e.target.value + "px";
+      renderStage();
+    });
+    document.getElementById("stageWidth").addEventListener("input", (e) => {
+      document.getElementById("widthVal").textContent = e.target.value + "px";
+      renderStage();
+    });
+    ["bg", "color", "font"].forEach((k) => {
+      stageInputs[k].addEventListener("input", renderStage);
+    });
+    Object.values(textInputs).forEach((el) => {
+      el.addEventListener("input", renderStage);
+      el.addEventListener("change", renderStage);
+    });
+    Object.values(creditInputs).forEach((el) => {
+      el.addEventListener("input", renderStage);
+      el.addEventListener("change", renderStage);
+    });
+
+    // 배경 이미지
+    document.getElementById("stageBgImg").addEventListener("change", (e) => {
+      const f = e.target.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        stageBgImage = reader.result;
+        document.getElementById("bgDimWrap").style.display = "block";
+        renderStage();
+      };
+      reader.readAsDataURL(f);
+    });
+    document.getElementById("stageBgClear").addEventListener("click", () => {
+      stageBgImage = null;
+      document.getElementById("stageBgImg").value = "";
+      document.getElementById("bgDimWrap").style.display = "none";
+      renderStage();
+    });
+    document.getElementById("stageBgDim").addEventListener("input", (e) => {
+      document.getElementById("bgDimVal").textContent = e.target.value + "%";
+      renderStage();
+    });
+
+    // ===== 블록 추가 버튼 =====
+    document.querySelectorAll("[data-add]").forEach((btn) => {
+      btn.addEventListener("click", () => addBlock(btn.dataset.add));
+    });
+
+    // ===== PNG 저장 =====
+    // html2canvas가 로드 안 됐으면 다른 CDN에서 재시도
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+        s.src = src;
+        s.onload = resolve;
+        s.onerror = () => reject(new Error("load fail: " + src));
+        document.head.appendChild(s);
+        // 8초 내에 응답 없으면 실패 처리 (매달림 방지)
+        setTimeout(() => reject(new Error("timeout: " + src)), 8000);
+      });
+    }
+
+    async function ensureHtml2Canvas() {
+      if (typeof html2canvas !== "undefined") return true;
+      const cdns = [
+        "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js",
+        "https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js",
+      ];
+      for (const url of cdns) {
+        try {
+          await loadScript(url);
+          if (typeof html2canvas !== "undefined") return true;
+        } catch (e) { /* 다음 CDN 시도 */ }
+      }
+      return false;
+    }
+
+    document.getElementById("saveBtn").addEventListener("click", async () => {
+      if (blocks.length === 0) { alert("먼저 블록을 추가하세요."); return; }
+      const btn = document.getElementById("saveBtn");
+      const orig = btn.textContent;
+      btn.textContent = "저장 중…";
+      btn.disabled = true;
+      try {
+        const ok = await ensureHtml2Canvas();
+        if (!ok) {
+          alert("이미지 저장에 필요한 라이브러리(html2canvas)를 불러오지 못했어요.\n인터넷 연결을 확인한 뒤 페이지를 새로고침해 주세요.");
+          return;
+        }
+        const canvas = await html2canvas(stage, {
+          backgroundColor: stageInputs.bg.value,
+          scale: 2,
+          useCORS: true,
+          logging: false,
+        });
+        const dataUrl = canvas.toDataURL("image/png");
+        // 1차: 일반 다운로드 시도
+        let downloaded = false;
+        try {
+          const link = document.createElement("a");
+          link.download = "log.png";
+          link.href = dataUrl;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          downloaded = true;
+        } catch (e) { /* 폴백으로 */ }
+        // 2차: 다운로드가 막힌 환경(샌드박스 등)이면 새 탭에 이미지 표시
+        if (!downloaded) {
+          const win = window.open();
+          if (win) {
+            win.document.write('<img src="' + dataUrl + '" style="max-width:100%;">');
+            alert("다운로드가 막힌 환경이라 새 탭에 이미지를 띄웠어요. 이미지를 우클릭해 저장하세요.");
+          } else {
+            alert("다운로드와 새 탭 모두 막혀 있어요. 파일을 컴퓨터에 저장한 뒤 브라우저로 직접 열어서 사용해 주세요.");
+          }
+        }
+      } catch (err) {
+        console.error(err);
+        alert("이미지 저장 중 문제가 생겼어요: " + (err && err.message ? err.message : err) + "\nHTML 블록에 외부 사이트 이미지가 있으면 실패할 수 있어요. 그 경우 이미지는 '＋ 이미지' 블록으로 넣어주세요.");
+      } finally {
+        btn.textContent = orig;
+        btn.disabled = false;
+      }
+    });
+
+    // ===== 섹션 접기/펴기 ("블록"만 기본 펼침) =====
+    document.querySelectorAll(".toolbar .section").forEach((sec) => {
+      const t = sec.querySelector(".section-title");
+      if (!t) return;
+      const arrow = document.createElement("span");
+      arrow.className = "arrow";
+      arrow.textContent = "▾";
+      t.appendChild(arrow);
+      if (t.textContent.indexOf("블록") === -1) sec.classList.add("collapsed");
+      t.addEventListener("click", () => sec.classList.toggle("collapsed"));
+    });
+
+    // 초기 렌더
+    renderEditor();
+    renderStage();
+  </script>
+</body>
+</html>
