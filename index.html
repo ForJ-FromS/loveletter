@@ -333,6 +333,11 @@
       -webkit-box-decoration-break: clone;
     }
 
+    .quote-editor [data-format="speaker"] {
+      font-weight: 800;
+      color: var(--editor-speaker-color, inherit);
+    }
+
     .quote-editor [data-format="quote"] {
       border-left: 3px solid var(--editor-quote-color, #d6533f);
       padding-left: 8px;
@@ -980,13 +985,16 @@
             <button class="format-btn" data-format="bold" type="button" title="드래그한 부분 굵게">B 굵게</button>
             <button class="format-btn" data-format="italic" type="button" title="드래그한 부분 기울임" style="font-style:italic;">I 기울임</button>
             <button class="format-btn" data-format="hilite" type="button" title="드래그한 부분 형광펜">형광펜</button>
-            <button class="format-btn" data-format="quote" type="button" title="드래그한 부분 인용 바">▏인용</button>
+            <button class="format-btn" data-format="quote" type="button" title="드래그한 부분 인용 바 (현재 고른 인용 바 색이 적용돼요)">▏인용</button>
+            <button class="format-btn" data-format="speaker" type="button" title="드래그한 부분을 대본식 화자 이름으로 (굵게)" style="font-weight:800;">이름</button>
           </div>
           <div class="format-color-panel" id="formatColorPanel" aria-live="polite">
             <label id="formatColorLabel" for="emphColor">강조 색</label>
             <input id="emphColor" class="format-color-input" data-color-format="emph" type="color" value="#7fd0ff">
             <input id="hiliteColor" class="format-color-input" data-color-format="hilite" type="color" value="#ffe14d" hidden>
             <input id="dialogBarColor" class="format-color-input" data-color-format="quote" type="color" value="#ffd27f" hidden>
+            <input id="speakerColor" class="format-color-input" data-color-format="speaker" type="color" value="#ffd27f" hidden>
+            <button id="quoteUnifyBtn" class="format-btn" type="button" title="모든 인용 바를 지금 고른 색으로 통일" hidden>전체 통일</button>
             <span class="format-color-note" id="formatColorNote">강조 버튼 색이에요.</span>
           </div>
           <div class="toggle-row tools-row">
@@ -1443,6 +1451,7 @@
       creditColor: document.querySelector("#creditColor"),
       dividerColor: document.querySelector("#dividerColor"),
       dialogBarColor: document.querySelector("#dialogBarColor"),
+      speakerColor: document.querySelector("#speakerColor"),
       dividerGap: document.querySelector("#dividerGap"),
       dividerLineGap: document.querySelector("#lineGap"),
       gradColor1: document.querySelector("#gradColor1"),
@@ -1556,6 +1565,7 @@
       if (format === "italic") return [ITALIC_MARK, ITALIC_MARK];
       if (format === "hilite") return [HILITE_MARK, HILITE_MARK];
       if (format === "quote") return [QUOTE_MARK, QUOTE_MARK];
+      if (format === "speaker") return [SPEAKER_MARK, SPEAKER_MARK];
       return null;
     }
 
@@ -1563,6 +1573,7 @@
       quoteEditor.style.setProperty("--editor-emph-color", inputs.emphColor.value);
       quoteEditor.style.setProperty("--editor-hilite-color", rgba(inputs.hiliteColor.value, 0.68));
       quoteEditor.style.setProperty("--editor-quote-color", inputs.dialogBarColor.value || inputs.dialogColor.value);
+      quoteEditor.style.setProperty("--editor-speaker-color", inputs.speakerColor.value);
     }
 
     function nodeToTaggedText(node) {
@@ -1580,11 +1591,19 @@
 
       const format = node.dataset?.format;
       const marker = markerForFormat(format);
-      if (marker && text) text = marker[0] + text + marker[1];
+      if (marker && text) {
+        let prefix = "";
+        if (format === "quote" && node.dataset.color) {
+          quoteColorTable.push(node.dataset.color);
+          prefix = QCOLOR_MARK + quoteColorIndexChar(quoteColorTable.length - 1);
+        }
+        text = marker[0] + prefix + text + marker[1];
+      }
       return text;
     }
 
     function syncQuoteSourceFromEditor() {
+      quoteColorTable = [];
       inputs.quote.value = nodeToTaggedText(quoteEditor).replace(/\n$/, "");
     }
 
@@ -1654,16 +1673,21 @@
       const labels = {
         emph: ["강조 색", "강조 버튼 색이에요."],
         hilite: ["형광펜 색", "형광펜 버튼 색이에요."],
-        quote: ["인용 바 색", "인용 바 색이에요."],
+        quote: ["인용 바 색", "지금 고른 색으로 인용 바가 들어가요. 인용마다 다른 색 가능해요."],
+        speaker: ["이름 색", "화자 이름(대본식) 색이에요."],
       };
       if (!labels[format]) {
         formatColorPanel.classList.remove("is-open");
+        const ub = document.querySelector("#quoteUnifyBtn");
+        if (ub) ub.hidden = true;
         return;
       }
 
       document.querySelectorAll(".format-color-input").forEach((input) => {
         input.hidden = input.dataset.colorFormat !== format;
       });
+      const unifyBtn = document.querySelector("#quoteUnifyBtn");
+      if (unifyBtn) unifyBtn.hidden = format !== "quote";
       const activeInput = document.querySelector(`[data-color-format="${format}"]`);
       formatColorLabel.textContent = labels[format][0];
       formatColorLabel.setAttribute("for", activeInput.id);
@@ -1817,6 +1841,11 @@
     const HILITE_MARK = "\u0003"; // 형광펜 토글 마커
     const QUOTE_MARK = "\u0004"; // 인용 바 토글 마커
     const ITALIC_MARK = "\u0005"; // 기울임 토글 마커
+    const QCOLOR_MARK = "\u0006"; // 인용 바 개별 색: QUOTE_MARK 뒤에 QCOLOR_MARK + 색 인덱스 문자
+    const SPEAKER_MARK = "\u0007"; // 화자 이름(대본식) 토글 마커
+    const PUA_RE = /[\uE000-\uE0FF]/g;
+    let quoteColorTable = []; // 인용 바 개별 색 테이블
+    const quoteColorIndexChar = (i) => String.fromCharCode(0xE000 + i);
 
     // **...** -> 강조색, ==...== -> 볼드, //...// -> 기울임, !!...!! -> 형광펜, >>...>> -> 인용 바.
     // 정규식으로 '짝이 맞는' 구간만 마커로 감싸므로, 짝 안 맞는 표시는 그냥 텍스트로 남아
@@ -1840,11 +1869,12 @@
       out = out.replace(/==([\s\S]+?)==/g, (m, inner) => BOLD_MARK + inner + BOLD_MARK);
       // 기울임: //내용// (항상 적용)
       out = out.replace(/\/\/([\s\S]+?)\/\//g, (m, inner) => ITALIC_MARK + inner + ITALIC_MARK);
+      out = out.replace(/@@([^\n@]+?)@@/g, (m, inner) => SPEAKER_MARK + inner + SPEAKER_MARK);
       return out;
     }
 
     // 한 줄을 따옴표(inQuote)·강조(emph)·볼드(emBold)·형광펜(hilite)·인용(quoted) 상태가 매겨진 세그먼트로 분해.
-    function splitQuoteSegments(line, inQuoteStart, emphStart, boldStart, hiliteStart, quotedStart, italicStart) {
+    function splitQuoteSegments(line, inQuoteStart, emphStart, boldStart, hiliteStart, quotedStart, italicStart, quoteColorStart, speakerStart) {
       const openers = ['"', '\u201c']; // " 와 “
       const closers = ['"', '\u201d']; // " 와 ”
       const chars = [...line];
@@ -1855,23 +1885,34 @@
       let hilite = hiliteStart;
       let quoted = quotedStart;
       let italic = italicStart;
-      chars.forEach((ch) => {
-        if (ch === EMPH_MARK) { emph = !emph; return; }
-        if (ch === BOLD_MARK) { emBold = !emBold; return; }
-        if (ch === HILITE_MARK) { hilite = !hilite; return; }
-        if (ch === QUOTE_MARK) { quoted = !quoted; return; }
-        if (ch === ITALIC_MARK) { italic = !italic; return; }
+      let quoteColor = quoteColorStart || null;
+      let speaker = speakerStart || false;
+      for (let i = 0; i < chars.length; i++) {
+        const ch = chars[i];
+        if (ch === EMPH_MARK) { emph = !emph; continue; }
+        if (ch === BOLD_MARK) { emBold = !emBold; continue; }
+        if (ch === HILITE_MARK) { hilite = !hilite; continue; }
+        if (ch === QUOTE_MARK) { quoted = !quoted; if (!quoted) quoteColor = null; continue; }
+        if (ch === QCOLOR_MARK) {
+          const idx = chars[i + 1] ? chars[i + 1].charCodeAt(0) - 0xE000 : -1;
+          if (idx >= 0 && quoteColorTable[idx]) { quoteColor = quoteColorTable[idx]; i++; }
+          continue;
+        }
+        if (ch === ITALIC_MARK) { italic = !italic; continue; }
+        if (ch === SPEAKER_MARK) { speaker = !speaker; continue; }
+        if (PUA_RE.test(ch)) { PUA_RE.lastIndex = 0; continue; }
+        PUA_RE.lastIndex = 0;
         if (!inQuote && openers.includes(ch)) {
-          segs.push({ ch, inQuote: true, emph, emBold, hilite, quoted, italic });
+          segs.push({ ch, inQuote: true, emph, emBold, hilite, quoted, italic, quoteColor, speaker });
           inQuote = true;
         } else if (inQuote && closers.includes(ch)) {
-          segs.push({ ch, inQuote: true, emph, emBold, hilite, quoted, italic });
+          segs.push({ ch, inQuote: true, emph, emBold, hilite, quoted, italic, quoteColor, speaker });
           inQuote = false;
         } else {
-          segs.push({ ch, inQuote, emph, emBold, hilite, quoted, italic });
+          segs.push({ ch, inQuote, emph, emBold, hilite, quoted, italic, quoteColor, speaker });
         }
-      });
-      return { segs, inQuoteEnd: inQuote, emphEnd: emph, boldEnd: emBold, hiliteEnd: hilite, quotedEnd: quoted, italicEnd: italic };
+      }
+      return { segs, inQuoteEnd: inQuote, emphEnd: emph, boldEnd: emBold, hiliteEnd: hilite, quotedEnd: quoted, italicEnd: italic, quoteColorEnd: quoteColor, speakerEnd: speaker };
     }
 
     function buildFont(size, bold, italic, thin) {
@@ -1896,17 +1937,18 @@
       };
     }
 
-    function applyLetterSpacing(line, x, y, tracking, align, baseColor, dialogColor, emphColor, hiliteColor, inQuoteStart, emphStart, boldStart, hiliteStart, quotedStart, italicStart, fontSize, justifyWidth) {
+    function applyLetterSpacing(line, x, y, tracking, align, baseColor, dialogColor, emphColor, hiliteColor, inQuoteStart, emphStart, boldStart, hiliteStart, quotedStart, italicStart, fontSize, justifyWidth, speakerStart) {
       const useDialog = state.dialogMode === "on";
       // 대사 스타일(굵게/기울임/얇게) 중 하나라도 켜져 있으면 따옴표 인식이 필요
       const useDialogStyle = state.dialogBold || state.dialogItalic || state.dialogThin;
-      const hasMarkers = line.indexOf(EMPH_MARK) !== -1 || line.indexOf(BOLD_MARK) !== -1 || line.indexOf(HILITE_MARK) !== -1 || line.indexOf(QUOTE_MARK) !== -1 || line.indexOf(ITALIC_MARK) !== -1;
-      let segs, inQuoteEnd, emphEnd, boldEnd, hiliteEnd, quotedEnd, italicEnd;
+      const hasMarkers = line.indexOf(EMPH_MARK) !== -1 || line.indexOf(BOLD_MARK) !== -1 || line.indexOf(HILITE_MARK) !== -1 || line.indexOf(QUOTE_MARK) !== -1 || line.indexOf(ITALIC_MARK) !== -1 || line.indexOf(SPEAKER_MARK) !== -1;
+      let segs, inQuoteEnd, emphEnd, boldEnd, hiliteEnd, quotedEnd, italicEnd, speakerEnd;
       // 대사색/대사스타일/마커/줄 시작 상태 중 하나라도 관여하면 분해
-      if (useDialog || useDialogStyle || hasMarkers || emphStart || boldStart || hiliteStart || quotedStart || italicStart) {
-        ({ segs, inQuoteEnd, emphEnd, boldEnd, hiliteEnd, quotedEnd, italicEnd } = splitQuoteSegments(line, inQuoteStart, emphStart, boldStart, hiliteStart, quotedStart, italicStart));
+      if (useDialog || useDialogStyle || hasMarkers || emphStart || boldStart || hiliteStart || quotedStart || italicStart || speakerStart) {
+        ({ segs, inQuoteEnd, emphEnd, boldEnd, hiliteEnd, quotedEnd, italicEnd, speakerEnd } = splitQuoteSegments(line, inQuoteStart, emphStart, boldStart, hiliteStart, quotedStart, italicStart, null, speakerStart));
       } else {
-        segs = [...line].map((ch) => ({ ch, inQuote: false, emph: false, emBold: false, hilite: false, quoted: false, italic: false }));
+        segs = [...line].map((ch) => ({ ch, inQuote: false, emph: false, emBold: false, hilite: false, quoted: false, italic: false, speaker: false }));
+        speakerEnd = false;
         inQuoteEnd = false;
         emphEnd = false;
         boldEnd = false;
@@ -1917,6 +1959,7 @@
 
       // 본문(나레이션)과 대사 스타일을 완전히 분리. ==볼드==면 강제 볼드.
       const fontFor = (seg) => {
+        if (seg.speaker) return buildFont(fontSize, true, false, false);
         if (seg.inQuote) {
           return buildFont(fontSize, state.dialogBold || seg.emBold, state.dialogItalic || seg.italic, state.dialogThin && !seg.emBold);
         }
@@ -1924,6 +1967,7 @@
       };
       // 색 우선순위: 강조 > 대사 > 기본. 단 강조색은 강조모드 켜졌을 때만.
       const colorFor = (seg) => {
+        if (seg.speaker) return inputs.speakerColor.value;
         if (seg.emph && state.emphMode === "on") return emphColor;
         if (seg.inQuote && useDialog) return dialogColor;
         return baseColor;
@@ -2004,11 +2048,11 @@
       });
 
       ctx.textAlign = savedAlign;
-      return { inQuoteEnd, emphEnd, boldEnd, hiliteEnd, quotedEnd, italicEnd };
+      return { inQuoteEnd, emphEnd, boldEnd, hiliteEnd, quotedEnd, italicEnd, speakerEnd };
     }
 
     function measureWithTracking(text, tracking) {
-      const clean = text.split(EMPH_MARK).join("").split(BOLD_MARK).join("").split(HILITE_MARK).join("").split(QUOTE_MARK).join("").split(ITALIC_MARK).join(""); // 마커는 폭에서 제외
+      const clean = text.split(EMPH_MARK).join("").split(BOLD_MARK).join("").split(HILITE_MARK).join("").split(QUOTE_MARK).join("").split(ITALIC_MARK).join("").split(QCOLOR_MARK).join("").split(SPEAKER_MARK).join("").replace(PUA_RE, ""); // 마커는 폭에서 제외
       const chars = [...clean];
       const basic = ctx.measureText(clean).width;
       return basic + Math.max(0, chars.length - 1) * tracking;
@@ -2197,13 +2241,14 @@
       // 인용 바: >>내용>> 으로 감싼 구간이 있는 줄에 세로 바 (줄 간 상태 이어감)
       if (state.dialogBar) {
         let qd = false; // quoted 상태
-        let barTop = null, barBottom = null;
+        let qc = null;  // 현재 인용 색 (개별 지정 없으면 null → 기본색)
+        let barTop = null, barBottom = null, barCol = null;
         let yy = y;
-        const barColor = inputs.dialogBarColor.value;
+        const defaultBar = inputs.dialogBarColor.value;
         const flushBar = () => {
           if (barTop == null) return;
           ctx.save();
-          ctx.fillStyle = barColor;
+          ctx.fillStyle = barCol || defaultBar;
           ctx.globalAlpha = 0.7;
           ctx.shadowColor = "transparent";
           ctx.fillRect(pad, barTop, quoteLayout.barWidth, barBottom - barTop);
@@ -2211,17 +2256,22 @@
           barTop = null;
         };
         fit.lines.forEach((lineObj) => {
-          const seg = splitQuoteSegments(lineObj.text, false, false, false, false, qd, false);
-          const hasQuoted = qd || seg.segs.some((s) => s.quoted);
+          const seg = splitQuoteSegments(lineObj.text, false, false, false, false, qd, false, qc, false);
+          const quotedSegs = seg.segs.filter((s) => s.quoted);
+          const hasQuoted = qd || quotedSegs.length > 0;
           if (hasQuoted) {
+            const lineColor = (quotedSegs[0] && quotedSegs[0].quoteColor) || qc || null;
+            // 색이 바뀌면 이전 바를 끊고 새로 시작
+            if (barTop != null && (barCol || defaultBar) !== (lineColor || defaultBar)) flushBar();
             const top = yy - fit.size * 0.82;
             const bot = yy + fit.size * 0.2;
-            if (barTop == null) barTop = top;
+            if (barTop == null) { barTop = top; barCol = lineColor; }
             barBottom = bot;
           } else {
             flushBar();
           }
           qd = seg.quotedEnd;
+          qc = seg.quotedEnd ? seg.quoteColorEnd : null;
           yy += lineGap;
         });
         flushBar();
@@ -2233,6 +2283,7 @@
       let hilite = false;
       let quoted = false;
       let italic = false;
+      let speakerOn = false;
       fit.lines.forEach((lineObj) => {
         const line = lineObj.text;
         const qState = quoteLineState(line, quoted);
@@ -2241,7 +2292,7 @@
         // 양쪽 정렬: 문단의 마지막 줄과 빈 줄은 늘리지 않음 (워드와 동일)
         let justifyWidth = 0;
         if (isJustify) {
-          const visible = line.split(EMPH_MARK).join("").split(BOLD_MARK).join("").split(HILITE_MARK).join("").split(QUOTE_MARK).join("").split(ITALIC_MARK).join("");
+          const visible = line.split(EMPH_MARK).join("").split(BOLD_MARK).join("").split(HILITE_MARK).join("").split(QUOTE_MARK).join("").split(ITALIC_MARK).join("").split(QCOLOR_MARK).join("").split(SPEAKER_MARK).join("").replace(PUA_RE, "");
           if (!lineObj.isParaEnd && visible.trim().length > 0) {
             justifyWidth = effectiveMaxWidth;
           }
@@ -2249,13 +2300,14 @@
         // 양쪽 정렬일 때 시작 x는 왼쪽(pad) 기준
         const lineX = isQuotedLine ? pad + quoteLayout.inset : (isJustify ? pad : x);
         const lineAlign = isQuotedLine ? "left" : (isJustify ? "left" : align);
-        const r = applyLetterSpacing(line, lineX, y, tracking, lineAlign, baseColor, dialogColor, emphColor, hiliteColor, inQuote, emph, emBold, hilite, quoted, italic, fit.size, justifyWidth);
+        const r = applyLetterSpacing(line, lineX, y, tracking, lineAlign, baseColor, dialogColor, emphColor, hiliteColor, inQuote, emph, emBold, hilite, quoted, italic, fit.size, justifyWidth, speakerOn);
         inQuote = r.inQuoteEnd;
         emph = r.emphEnd;
         emBold = r.boldEnd;
         hilite = r.hiliteEnd;
         quoted = r.quotedEnd;
         italic = r.italicEnd;
+        speakerOn = r.speakerEnd;
         y += lineGap;
       });
       ctx.restore();
@@ -2348,7 +2400,9 @@
       labels.borderInset.textContent = `${inputs.borderInset.value}px`;
       labels.watermarkOpacity.textContent = `${inputs.watermarkOpacity.value}%`;
       const plainCount = inputs.quote.value
-        .replace(/[\u0001-\u0005]/g, "")
+        .replace(/[\u0001-\u0007]/g, "")
+        .replace(/[\uE000-\uE0FF]/g, "")
+        .replace(/@@/g, "")
         .replace(/\*\*/g, "")
         .replace(/==/g, "")
         .replace(/\/\//g, "")
@@ -2410,6 +2464,10 @@
 
       const span = document.createElement("span");
       span.dataset.format = format;
+      if (format === "quote") {
+        span.dataset.color = inputs.dialogBarColor.value;
+        span.style.setProperty("--editor-quote-color", inputs.dialogBarColor.value);
+      }
 
       if (!range || range.collapsed) {
         range = document.createRange();
@@ -2538,6 +2596,15 @@
     bindStyleToggle("#dialogThin", "dialogThin", "dialogBold", "#dialogBold");
     bindStyleToggle("#dialogBold", "dialogBold", "dialogThin", "#dialogThin");
     bindStyleToggle("#dialogItalic", "dialogItalic");
+    document.querySelector("#quoteUnifyBtn").addEventListener("click", () => {
+      const color = inputs.dialogBarColor.value;
+      quoteEditor.querySelectorAll('[data-format="quote"]').forEach((el) => {
+        el.dataset.color = color;
+        el.style.setProperty("--editor-quote-color", color);
+      });
+      syncQuoteSourceFromEditor();
+      draw();
+    });
     bindStyleToggle("#dialogBar", "dialogBar");
     const dialogBarButton = document.querySelector("#dialogBar");
     if (dialogBarButton) {
@@ -2664,7 +2731,7 @@
     // 프리셋에 담을 입력 키 (본문/이미지 제외)
     const presetInputKeys = [
       "font", "align", "fontSize", "lineHeight", "padding", "tracking",
-      "fit", "bgColor", "textColor", "dialogColor", "emphColor", "hiliteColor", "creditAlign", "creditSep", "creditSize", "creditColor", "dividerColor", "dialogBarColor", "dividerGap", "dividerLineGap",
+      "fit", "bgColor", "textColor", "dialogColor", "emphColor", "hiliteColor", "creditAlign", "creditSep", "creditSize", "creditColor", "dividerColor", "dialogBarColor", "speakerColor", "dividerGap", "dividerLineGap",
       "gradColor1", "gradColor2", "gradDir", "gradOpacity",
       "borderWidth", "borderColor", "borderInset",
       "watermark", "watermarkPos", "watermarkOpacity", "dim",
