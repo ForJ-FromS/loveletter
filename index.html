@@ -1514,6 +1514,7 @@
       divider: false,
     };
     let dialogBarColorCustom = inputs.dialogBarColor.value !== inputs.dialogColor.value;
+    let lastQuoteSpan = null; // 가장 최근에 만든 인용 (색 바꾸면 즉시 반영)
 
     function syncDialogBarColor(force = false) {
       if (force || !dialogBarColorCustom) {
@@ -2467,6 +2468,7 @@
       if (format === "quote") {
         span.dataset.color = inputs.dialogBarColor.value;
         span.style.setProperty("--editor-quote-color", inputs.dialogBarColor.value);
+        lastQuoteSpan = span;
       }
 
       if (!range || range.collapsed) {
@@ -2925,6 +2927,11 @@
       input.addEventListener("input", () => {
         if (input === inputs.dialogBarColor) {
           dialogBarColorCustom = true;
+          if (lastQuoteSpan && quoteEditor.contains(lastQuoteSpan)) {
+            lastQuoteSpan.dataset.color = inputs.dialogBarColor.value;
+            lastQuoteSpan.style.setProperty("--editor-quote-color", inputs.dialogBarColor.value);
+            syncQuoteSourceFromEditor();
+          }
         } else if (input === inputs.dialogColor) {
           syncDialogBarColor();
         }
@@ -2933,6 +2940,11 @@
       input.addEventListener("change", () => {
         if (input === inputs.dialogBarColor) {
           dialogBarColorCustom = true;
+          if (lastQuoteSpan && quoteEditor.contains(lastQuoteSpan)) {
+            lastQuoteSpan.dataset.color = inputs.dialogBarColor.value;
+            lastQuoteSpan.style.setProperty("--editor-quote-color", inputs.dialogBarColor.value);
+            syncQuoteSourceFromEditor();
+          }
         } else if (input === inputs.dialogColor) {
           syncDialogBarColor();
         }
